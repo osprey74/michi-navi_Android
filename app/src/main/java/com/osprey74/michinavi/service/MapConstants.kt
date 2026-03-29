@@ -20,7 +20,7 @@ object MapConstants {
 /**
  * 速度に応じたズーム段階マッピング（MapKit latitudeDelta相当の度数を返す）
  *
- * 注意: Google Maps SDK ではズームレベル（0–21）に変換が必要。
+ * 注意: MapLibre ではズームレベル（0–22）に変換が必要。
  * latitudeDeltaToZoomLevel() で変換すること。
  */
 fun zoomLevelForSpeed(speedKmh: Double): Double {
@@ -35,7 +35,7 @@ fun zoomLevelForSpeed(speedKmh: Double): Double {
 }
 
 /**
- * MapKit風の緯度デルタ（度数）をGoogle Mapsのズームレベルに変換
+ * MapKit風の緯度デルタ（度数）をMapLibreのズームレベルに変換
  */
 fun latitudeDeltaToZoomLevel(latitudeDelta: Double): Float {
     // Google Maps: zoom = log2(360 / latitudeDelta)

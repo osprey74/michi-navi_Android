@@ -64,6 +64,9 @@ dependencies {
     // MapLibre
     implementation(libs.ramani.maplibre)
 
+    // Location
+    implementation(libs.play.services.location)
+
     // Serialization
     implementation(libs.kotlinx.serialization.json)
 

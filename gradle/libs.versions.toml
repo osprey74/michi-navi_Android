@@ -6,6 +6,7 @@ activityCompose = "1.10.0"
 lifecycleRuntime = "2.8.7"
 coreKtx = "1.15.0"
 ramaniMaps = "0.10.0"
+playServicesLocation = "21.3.0"
 kotlinxSerialization = "1.7.3"
 datastorePreferences = "1.1.3"
 coroutines = "1.9.0"
@@ -26,6 +27,7 @@ compose-ui-tooling = { group = "androidx.compose.ui", name = "ui-tooling" }
 compose-ui-test-manifest = { group = "androidx.compose.ui", name = "ui-test-manifest" }
 
 ramani-maplibre = { group = "org.ramani-maps", name = "ramani-maplibre", version.ref = "ramaniMaps" }
+play-services-location = { group = "com.google.android.gms", name = "play-services-location", version.ref = "playServicesLocation" }
 
 kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "kotlinxSerialization" }
 kotlinx-coroutines-android = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-android", version.ref = "coroutines" }

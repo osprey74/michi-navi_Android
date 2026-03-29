@@ -8,7 +8,11 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
@@ -44,6 +48,7 @@ private const val DEFAULT_ZOOM = 10.0
 fun MapScreen(
     viewModel: MapViewModel,
     onOpenSettings: () -> Unit = {},
+    onOpenStationPicker: () -> Unit = {},
 ) {
     val locationState by viewModel.locationState.collectAsState()
     val visibleStations by viewModel.visibleStations.collectAsState()
@@ -127,22 +132,38 @@ fun MapScreen(
                 }
             }
 
-            // 設定ボタン
-            FloatingActionButton(
-                onClick = onOpenSettings,
+            // 右上ボタン群
+            Column(
                 modifier = Modifier
                     .align(Alignment.TopEnd)
                     .statusBarsPadding()
-                    .padding(16.dp)
-                    .size(40.dp),
-                containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
-                contentColor = MaterialTheme.colorScheme.onSurface,
+                    .padding(16.dp),
             ) {
-                Icon(
-                    imageVector = Icons.Default.Settings,
-                    contentDescription = "設定",
-                    modifier = Modifier.size(20.dp),
-                )
+                FloatingActionButton(
+                    onClick = onOpenSettings,
+                    modifier = Modifier.size(40.dp),
+                    containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
+                    contentColor = MaterialTheme.colorScheme.onSurface,
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Settings,
+                        contentDescription = "設定",
+                        modifier = Modifier.size(20.dp),
+                    )
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                FloatingActionButton(
+                    onClick = onOpenStationPicker,
+                    modifier = Modifier.size(40.dp),
+                    containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
+                    contentColor = MaterialTheme.colorScheme.onSurface,
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.List,
+                        contentDescription = "道の駅を選択",
+                        modifier = Modifier.size(20.dp),
+                    )
+                }
             }
         }
 

@@ -12,7 +12,10 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.osprey74.michinavi.ui.screen.MapScreen
 import com.osprey74.michinavi.ui.screen.MapViewModel
 import com.osprey74.michinavi.ui.screen.SettingsScreen
+import com.osprey74.michinavi.ui.screen.StationPickerScreen
 import com.osprey74.michinavi.ui.theme.MichiNaviTheme
+
+private enum class Screen { Map, Settings, StationPicker }
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -21,17 +24,25 @@ class MainActivity : ComponentActivity() {
         setContent {
             MichiNaviTheme {
                 val viewModel: MapViewModel = viewModel()
-                var showSettings by remember { mutableStateOf(false) }
+                var currentScreen by remember { mutableStateOf(Screen.Map) }
 
-                if (showSettings) {
-                    SettingsScreen(
+                when (currentScreen) {
+                    Screen.Map -> MapScreen(
                         viewModel = viewModel,
-                        onBack = { showSettings = false },
+                        onOpenSettings = { currentScreen = Screen.Settings },
+                        onOpenStationPicker = { currentScreen = Screen.StationPicker },
                     )
-                } else {
-                    MapScreen(
+                    Screen.Settings -> SettingsScreen(
                         viewModel = viewModel,
-                        onOpenSettings = { showSettings = true },
+                        onBack = { currentScreen = Screen.Map },
+                    )
+                    Screen.StationPicker -> StationPickerScreen(
+                        viewModel = viewModel,
+                        onStationSelected = { station ->
+                            viewModel.selectStation(station)
+                            currentScreen = Screen.Map
+                        },
+                        onBack = { currentScreen = Screen.Map },
                     )
                 }
             }

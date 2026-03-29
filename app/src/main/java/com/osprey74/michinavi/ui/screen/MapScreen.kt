@@ -6,7 +6,14 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
@@ -17,8 +24,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.compose.ui.unit.dp
 import org.maplibre.android.geometry.LatLng
 import org.maplibre.android.maps.Style
 import org.ramani.compose.CameraPosition
@@ -33,7 +41,10 @@ private const val DEFAULT_ZOOM = 10.0
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MapScreen(viewModel: MapViewModel = viewModel()) {
+fun MapScreen(
+    viewModel: MapViewModel,
+    onOpenSettings: () -> Unit = {},
+) {
     val locationState by viewModel.locationState.collectAsState()
     val visibleStations by viewModel.visibleStations.collectAsState()
     val poiItems by viewModel.poiItems.collectAsState()
@@ -114,6 +125,24 @@ fun MapScreen(viewModel: MapViewModel = viewModel()) {
                         color = poi.category.color,
                     )
                 }
+            }
+
+            // 設定ボタン
+            FloatingActionButton(
+                onClick = onOpenSettings,
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .statusBarsPadding()
+                    .padding(16.dp)
+                    .size(40.dp),
+                containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
+                contentColor = MaterialTheme.colorScheme.onSurface,
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Settings,
+                    contentDescription = "設定",
+                    modifier = Modifier.size(20.dp),
+                )
             }
         }
 

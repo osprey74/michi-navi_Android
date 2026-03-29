@@ -19,6 +19,7 @@ class SettingsRepository(private val context: Context) {
     private object Keys {
         val ZOOM_POSITION = stringPreferencesKey("zoom_position")
         val MAP_TILE_TYPE = stringPreferencesKey("map_tile_type")
+        val GOOGLE_MAPS_API_KEY = stringPreferencesKey("google_maps_api_key")
         val SHOW_GAS_STATIONS = booleanPreferencesKey("show_gas_stations")
         val SHOW_FOOD_MARKETS = booleanPreferencesKey("show_food_markets")
         val SHOW_RESTAURANTS = booleanPreferencesKey("show_restaurants")
@@ -31,6 +32,7 @@ class SettingsRepository(private val context: Context) {
         AppSettings(
             zoomPosition = prefs[Keys.ZOOM_POSITION] ?: "right",
             mapTileType = prefs[Keys.MAP_TILE_TYPE] ?: "gsi_pale",
+            googleMapsApiKey = prefs[Keys.GOOGLE_MAPS_API_KEY] ?: "",
             showGasStations = prefs[Keys.SHOW_GAS_STATIONS] ?: true,
             showFoodMarkets = prefs[Keys.SHOW_FOOD_MARKETS] ?: false,
             showRestaurants = prefs[Keys.SHOW_RESTAURANTS] ?: false,
@@ -43,6 +45,7 @@ class SettingsRepository(private val context: Context) {
         context.dataStore.edit { prefs ->
             prefs[Keys.ZOOM_POSITION] = settings.zoomPosition
             prefs[Keys.MAP_TILE_TYPE] = settings.mapTileType
+            prefs[Keys.GOOGLE_MAPS_API_KEY] = settings.googleMapsApiKey
             prefs[Keys.SHOW_GAS_STATIONS] = settings.showGasStations
             prefs[Keys.SHOW_FOOD_MARKETS] = settings.showFoodMarkets
             prefs[Keys.SHOW_RESTAURANTS] = settings.showRestaurants

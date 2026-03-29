@@ -60,23 +60,47 @@ private const val STATION_SOURCE = "station-source"
 private const val STATION_LAYER = "station-layer"
 private const val POI_SOURCE = "poi-source"
 private const val POI_LAYER = "poi-layer"
+private const val USER_LOCATION_SOURCE = "user-location-source"
+private const val USER_LOCATION_LAYER = "user-location-layer"
+private const val USER_LOCATION_OUTLINE_LAYER = "user-location-outline-layer"
 
-private fun buildStyleForTileType(tileType: String): Style.Builder {
+private fun buildStyleForTileType(
+    tileType: String,
+    googleMapsApiKey: String = "",
+    googleMapsSession: String? = null,
+): Style.Builder {
     return when (tileType) {
         "openfreemap" -> Style.Builder().fromUri("https://tiles.openfreemap.org/styles/liberty")
         "gsi_std" -> Style.Builder().fromJson(rasterStyleJson(
-            "https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png"
+            "https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png",
+            attribution = "<a href='https://maps.gsi.go.jp/development/ichiran.html'>国土地理院</a>",
         ))
         "gsi_photo" -> Style.Builder().fromJson(rasterStyleJson(
-            "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg"
+            "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg",
+            attribution = "<a href='https://maps.gsi.go.jp/development/ichiran.html'>国土地理院</a>",
         ))
+        "google_maps" -> {
+            if (googleMapsSession != null && googleMapsApiKey.isNotEmpty()) {
+                Style.Builder().fromJson(rasterStyleJson(
+                    "https://tile.googleapis.com/v1/2dtiles/{z}/{x}/{y}?session=$googleMapsSession&key=$googleMapsApiKey",
+                    attribution = "Google",
+                ))
+            } else {
+                // フォールバック: セッション未取得時は国土地理院淡色
+                Style.Builder().fromJson(rasterStyleJson(
+                    "https://cyberjapandata.gsi.go.jp/xyz/pale/{z}/{x}/{y}.png",
+                    attribution = "<a href='https://maps.gsi.go.jp/development/ichiran.html'>国土地理院</a>",
+                ))
+            }
+        }
         else -> Style.Builder().fromJson(rasterStyleJson(
-            "https://cyberjapandata.gsi.go.jp/xyz/pale/{z}/{x}/{y}.png"
+            "https://cyberjapandata.gsi.go.jp/xyz/pale/{z}/{x}/{y}.png",
+            attribution = "<a href='https://maps.gsi.go.jp/development/ichiran.html'>国土地理院</a>",
         ))
     }
 }
 
-private fun rasterStyleJson(tileUrl: String): String = """
+private fun rasterStyleJson(tileUrl: String, attribution: String = ""): String = """
 {
   "version": 8,
   "sources": {
@@ -85,7 +109,7 @@ private fun rasterStyleJson(tileUrl: String): String = """
       "tiles": ["$tileUrl"],
       "tileSize": 256,
       "maxzoom": 18,
-      "attribution": "<a href='https://maps.gsi.go.jp/development/ichiran.html'>国土地理院</a>"
+      "attribution": "$attribution"
     }
   },
   "layers": [{
@@ -95,6 +119,52 @@ private fun rasterStyleJson(tileUrl: String): String = """
   }]
 }
 """
+
+/**
+ * Google Maps Map Tiles API のセッショントークンを作成する
+ */
+private const val TAG = "MichiNavi"
+
+private suspend fun createGoogleMapsSession(apiKey: String): String? =
+    kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+        try {
+            val url = java.net.URL(
+                "https://tile.googleapis.com/v1/createSession?key=$apiKey"
+            )
+            val connection = url.openConnection() as java.net.HttpURLConnection
+            connection.requestMethod = "POST"
+            connection.setRequestProperty("Content-Type", "application/json")
+            connection.doOutput = true
+            connection.connectTimeout = 10_000
+            connection.readTimeout = 10_000
+            connection.outputStream.use { os ->
+                os.write("""{"mapType":"roadmap","language":"ja","region":"JP"}""".toByteArray())
+            }
+            val responseCode = connection.responseCode
+            if (responseCode != 200) {
+                val errorBody = try {
+                    connection.errorStream?.bufferedReader()?.use { it.readText() } ?: "no error body"
+                } catch (_: Exception) { "failed to read error" }
+                android.util.Log.e(TAG, "Google Maps session failed: HTTP $responseCode — $errorBody")
+                connection.disconnect()
+                return@withContext null
+            }
+            val body = connection.inputStream.bufferedReader().use { it.readText() }
+            connection.disconnect()
+            android.util.Log.d(TAG, "Google Maps session response: $body")
+            val regex = """"session"\s*:\s*"([^"]+)"""".toRegex()
+            val session = regex.find(body)?.groupValues?.get(1)
+            if (session != null) {
+                android.util.Log.d(TAG, "Google Maps session created successfully")
+            } else {
+                android.util.Log.e(TAG, "Google Maps session token not found in response")
+            }
+            session
+        } catch (e: Exception) {
+            android.util.Log.e(TAG, "Google Maps session exception: ${e.message}", e)
+            null
+        }
+    }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -137,7 +207,22 @@ fun MapScreen(
     val mapViewRef = remember { mutableStateOf<MapView?>(null) }
     var mapRef by remember { mutableStateOf<MapLibreMap?>(null) }
     var styleReady by remember { mutableStateOf(false) }
-    var currentTileType by remember { mutableStateOf(settings.mapTileType) }
+    // google_maps はセッション取得後に切り替えるため、初期値はフォールバック
+    val initialTileType = remember {
+        if (settings.mapTileType == "google_maps") "gsi_pale" else settings.mapTileType
+    }
+    var currentTileType by remember { mutableStateOf(initialTileType) }
+    var googleMapsSession by remember { mutableStateOf<String?>(null) }
+
+    // Google Maps セッション取得
+    LaunchedEffect(settings.googleMapsApiKey, settings.mapTileType) {
+        android.util.Log.d(TAG, "Session LaunchedEffect: tileType=${settings.mapTileType}, apiKey=${if (settings.googleMapsApiKey.isNotEmpty()) "set(${settings.googleMapsApiKey.length}chars)" else "empty"}")
+        if (settings.mapTileType == "google_maps" && settings.googleMapsApiKey.isNotEmpty()) {
+            android.util.Log.d(TAG, "Creating Google Maps session...")
+            googleMapsSession = createGoogleMapsSession(settings.googleMapsApiKey)
+            android.util.Log.d(TAG, "Session result: ${if (googleMapsSession != null) "success" else "failed"}")
+        }
+    }
 
     // ライフサイクル管理
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -182,13 +267,24 @@ fun MapScreen(
         }
     }
 
-    // タイル切替
-    LaunchedEffect(settings.mapTileType) {
+    // タイル切替 (mapRef をキーに含め、地図準備完了後にも再評価)
+    LaunchedEffect(settings.mapTileType, googleMapsSession, mapRef) {
+        android.util.Log.d(TAG, "Tile LaunchedEffect: tileType=${settings.mapTileType}, currentTile=$currentTileType, session=${googleMapsSession != null}")
+        // Google Maps選択時はセッション取得まで切り替えを待つ
+        if (settings.mapTileType == "google_maps" && googleMapsSession == null) {
+            android.util.Log.d(TAG, "Waiting for Google Maps session...")
+            return@LaunchedEffect
+        }
+
         if (settings.mapTileType != currentTileType) {
+            android.util.Log.d(TAG, "Switching tile: $currentTileType -> ${settings.mapTileType}")
             mapRef?.let { map ->
                 styleReady = false
                 currentTileType = settings.mapTileType
-                applyMapStyle(map, settings.mapTileType) {
+                applyMapStyle(
+                    map, settings.mapTileType,
+                    settings.googleMapsApiKey, googleMapsSession,
+                ) {
                     styleReady = true
                 }
             }
@@ -209,6 +305,18 @@ fun MapScreen(
                 }
             }
             source.setGeoJson(FeatureCollection.fromFeatures(features))
+        }
+    }
+
+    // 現在地マーカー更新
+    LaunchedEffect(locationState, styleReady) {
+        if (!styleReady) return@LaunchedEffect
+        val loc = locationState
+        if (loc.latitude == 0.0 && loc.longitude == 0.0) return@LaunchedEffect
+        mapRef?.style?.let { style ->
+            val source = style.getSourceAs<GeoJsonSource>(USER_LOCATION_SOURCE) ?: return@let
+            val point = Point.fromLngLat(loc.longitude, loc.latitude)
+            source.setGeoJson(FeatureCollection.fromFeatures(listOf(Feature.fromGeometry(point))))
         }
     }
 
@@ -246,7 +354,9 @@ fun MapScreen(
                         mapView.getMapAsync { map ->
                             mapRef = map
 
-                            applyMapStyle(map, settings.mapTileType) {
+                            applyMapStyle(
+                                map, initialTileType,
+                            ) {
                                 styleReady = true
                             }
 
@@ -376,8 +486,14 @@ fun MapScreen(
     }
 }
 
-private fun applyMapStyle(map: MapLibreMap, tileType: String, onReady: () -> Unit) {
-    map.setStyle(buildStyleForTileType(tileType)) { style ->
+private fun applyMapStyle(
+    map: MapLibreMap,
+    tileType: String,
+    googleMapsApiKey: String = "",
+    googleMapsSession: String? = null,
+    onReady: () -> Unit,
+) {
+    map.setStyle(buildStyleForTileType(tileType, googleMapsApiKey, googleMapsSession)) { style ->
         style.addSource(GeoJsonSource(STATION_SOURCE))
         style.addLayer(
             CircleLayer(STATION_LAYER, STATION_SOURCE).withProperties(
@@ -395,6 +511,21 @@ private fun applyMapStyle(map: MapLibreMap, tileType: String, onReady: () -> Uni
                 PropertyFactory.circleColor(Expression.get("color")),
                 PropertyFactory.circleStrokeWidth(1f),
                 PropertyFactory.circleStrokeColor(AndroidColor.WHITE),
+            )
+        )
+
+        // 現在地マーカー（白フチ付き青丸）
+        style.addSource(GeoJsonSource(USER_LOCATION_SOURCE))
+        style.addLayer(
+            CircleLayer(USER_LOCATION_OUTLINE_LAYER, USER_LOCATION_SOURCE).withProperties(
+                PropertyFactory.circleRadius(10f),
+                PropertyFactory.circleColor(AndroidColor.WHITE),
+            )
+        )
+        style.addLayer(
+            CircleLayer(USER_LOCATION_LAYER, USER_LOCATION_SOURCE).withProperties(
+                PropertyFactory.circleRadius(7f),
+                PropertyFactory.circleColor(AndroidColor.parseColor("#4285F4")),
             )
         )
 

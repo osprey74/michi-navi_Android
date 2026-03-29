@@ -5,10 +5,12 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.osprey74.michinavi.model.AppSettings
 import com.osprey74.michinavi.model.NearbyStation
+import com.osprey74.michinavi.model.PoiItem
 import com.osprey74.michinavi.model.RoadsideStation
 import com.osprey74.michinavi.service.LocationService
 import com.osprey74.michinavi.service.LocationState
 import com.osprey74.michinavi.service.MapConstants
+import com.osprey74.michinavi.service.PoiService
 import com.osprey74.michinavi.service.RoadsideStationRepository
 import com.osprey74.michinavi.service.RoadsideStationService
 import com.osprey74.michinavi.service.SettingsRepository
@@ -29,6 +31,7 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
     private val stationService = RoadsideStationService(repository)
     val locationService = LocationService(application)
     private val settingsRepository = SettingsRepository(application)
+    private val poiService = PoiService()
 
     // 位置情報
     val locationState: StateFlow<LocationState> = locationService.locationState
@@ -48,6 +51,10 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
     // ビューポート内道の駅（地図表示用）
     private val _visibleStations = MutableStateFlow<List<RoadsideStation>>(emptyList())
     val visibleStations: StateFlow<List<RoadsideStation>> = _visibleStations.asStateFlow()
+
+    // POI（施設スポット）
+    private val _poiItems = MutableStateFlow<List<PoiItem>>(emptyList())
+    val poiItems: StateFlow<List<PoiItem>> = _poiItems.asStateFlow()
 
     // 速度連動オートズーム
     private val _autoZoomLevel = MutableStateFlow(latitudeDeltaToZoomLevel(MapConstants.WIDE_ZOOM_DEGREES))
@@ -97,6 +104,14 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
         _visibleStations.value = stationService.updateVisibleStations(
             centerLat, centerLon, latitudeDelta, longitudeDelta,
         )
+        // POI取得（デバウンスはUI側で行う）
+        viewModelScope.launch {
+            val categories = poiService.enabledCategories(settings.value)
+            val items = poiService.fetchPois(
+                categories, centerLat, centerLon, latitudeDelta, longitudeDelta,
+            )
+            _poiItems.value = items
+        }
     }
 
     fun setFollowingUser(following: Boolean) {

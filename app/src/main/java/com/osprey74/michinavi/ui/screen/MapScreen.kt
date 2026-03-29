@@ -33,6 +33,7 @@ private const val DEFAULT_ZOOM = 10.0
 fun MapScreen(viewModel: MapViewModel = viewModel()) {
     val locationState by viewModel.locationState.collectAsState()
     val visibleStations by viewModel.visibleStations.collectAsState()
+    val poiItems by viewModel.poiItems.collectAsState()
 
     var permissionGranted by remember { mutableStateOf(false) }
 
@@ -85,12 +86,21 @@ fun MapScreen(viewModel: MapViewModel = viewModel()) {
                 styleBuilder = Style.Builder().fromUri(OPENFREEMAP_STYLE),
                 cameraPosition = cameraPosition,
             ) {
-                // 道の駅ピンを表示
+                // 道の駅ピン
                 visibleStations.forEach { station ->
                     Symbol(
                         center = LatLng(station.latitude, station.longitude),
                         size = 0.8f,
                         color = "#2196F3",
+                    )
+                }
+
+                // POIピン（GS / コンビニ / レストラン / 駐車場 / RVパーク）
+                poiItems.forEach { poi ->
+                    Symbol(
+                        center = LatLng(poi.latitude, poi.longitude),
+                        size = 0.6f,
+                        color = poi.category.color,
                     )
                 }
             }

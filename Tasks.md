@@ -38,6 +38,9 @@
 - [x] ナビゲーション機能 — Google Maps 連携ナビ (StationDetailSheet「ナビ開始」ボタン)
 - [x] 道の駅マーカー表示 — 地図上に道の駅 Symbol マーカー表示 (タップで詳細シート)
 - [x] お気に入り機能 — DataStore 永続化, 詳細シートのハートボタン, 駅選択画面にお気に入りタブ
+- [x] 地図タイル切替 — 国土地理院 (淡色/標準/航空写真) + OpenFreeMap, 設定画面で選択
+- [x] 現在地に戻るボタン — 右下に配置, 位置未取得時はグレーアウト
+- [x] iOS版準拠ボタン配置 — 設定:左上, 操作ボタン:右下 (zoomPositionで左右切替可能)
 - [ ] 走行中 UI 最適化 — 大きなボタン, 高コントラスト, 音声読み上げ
 
 ### 優先度: 中
@@ -67,6 +70,7 @@
 - [x] ic_launcher_foreground.xml — android:fillColor 重複属性修正
 - [x] MapScreen CameraPosition — rememberSaveable → remember に変更 (Bundle非対応型のクラッシュ修正)
 - [x] MapLibre 実機クラッシュ修正 — ramani-compose → MapLibre SDK 直接利用に移行 (Style未ロード時のLocationComponent初期化クラッシュ回避)
+- [x] 駅選択時カメラ位置バグ — factory内初期カメラを選択駅>現在地>デフォルトの優先順に修正
 
 ---
 
@@ -74,3 +78,4 @@
 - 2026-03-29: 初版作成 — 実装済み機能の棚卸し & 残タスク整理
 - 2026-03-29: お気に入り機能実装, バグ修正2件 (ic_launcher_foreground, CameraPosition)
 - 2026-03-29: ramani-compose → MapLibre SDK 直接利用に移行 (実機クラッシュ修正), 道の駅写真表示修正 (Wikimedia直接URL変換)
+- 2026-03-29: 地図タイル切替 (GSI淡色/標準/航空写真/OpenFreeMap), 現在地ボタン, iOS版準拠ボタン配置, 駅選択時カメラ移動修正

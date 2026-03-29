@@ -13,6 +13,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
@@ -79,6 +80,31 @@ fun SettingsScreen(
                 ) {
                     Text("右")
                 }
+            }
+
+            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+
+            // 地図タイル
+            SectionHeader("地図タイル")
+            val tileOptions = listOf(
+                "gsi_pale" to "国土地理院 淡色",
+                "gsi_std" to "国土地理院 標準",
+                "gsi_photo" to "国土地理院 航空写真",
+                "openfreemap" to "OpenFreeMap",
+            )
+            tileOptions.forEach { (key, label) ->
+                ListItem(
+                    headlineContent = { Text(label) },
+                    leadingContent = {
+                        RadioButton(
+                            selected = settings.mapTileType == key,
+                            onClick = {
+                                viewModel.updateSettings(settings.copy(mapTileType = key))
+                            },
+                        )
+                    },
+                    modifier = Modifier.padding(start = 0.dp),
+                )
             }
 
             HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))

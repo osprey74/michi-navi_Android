@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.osprey74.michinavi.model.AppSettings
 import kotlinx.coroutines.flow.Flow
@@ -22,6 +23,7 @@ class SettingsRepository(private val context: Context) {
         val SHOW_RESTAURANTS = booleanPreferencesKey("show_restaurants")
         val SHOW_PARKING = booleanPreferencesKey("show_parking")
         val SHOW_RV_PARKS = booleanPreferencesKey("show_rv_parks")
+        val FAVORITE_STATION_IDS = stringSetPreferencesKey("favorite_station_ids")
     }
 
     val settingsFlow: Flow<AppSettings> = context.dataStore.data.map { prefs ->
@@ -65,6 +67,22 @@ class SettingsRepository(private val context: Context) {
             restaurants?.let { prefs[Keys.SHOW_RESTAURANTS] = it }
             parking?.let { prefs[Keys.SHOW_PARKING] = it }
             rvParks?.let { prefs[Keys.SHOW_RV_PARKS] = it }
+        }
+    }
+
+    // お気に入り
+    val favoriteIdsFlow: Flow<Set<String>> = context.dataStore.data.map { prefs ->
+        prefs[Keys.FAVORITE_STATION_IDS] ?: emptySet()
+    }
+
+    suspend fun toggleFavorite(stationId: String) {
+        context.dataStore.edit { prefs ->
+            val current = prefs[Keys.FAVORITE_STATION_IDS] ?: emptySet()
+            prefs[Keys.FAVORITE_STATION_IDS] = if (stationId in current) {
+                current - stationId
+            } else {
+                current + stationId
+            }
         }
     }
 }

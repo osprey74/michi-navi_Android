@@ -16,8 +16,13 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
@@ -32,14 +37,18 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import com.osprey74.michinavi.model.Feature
 import com.osprey74.michinavi.model.RoadsideStation
+import java.security.MessageDigest
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun StationDetailSheet(
     station: RoadsideStation,
     sheetState: SheetState,
+    isFavorite: Boolean,
+    onToggleFavorite: () -> Unit,
     onDismiss: () -> Unit,
 ) {
     val context = LocalContext.current
@@ -57,8 +66,13 @@ fun StationDetailSheet(
         ) {
             // 施設写真
             station.imageUrl?.let { url ->
+                val directUrl = toWikimediaDirectUrl(url)
                 AsyncImage(
-                    model = url,
+                    model = ImageRequest.Builder(context)
+                        .data(directUrl)
+                        .addHeader("User-Agent", "MichiNavi/1.0 (Android)")
+                        .crossfade(true)
+                        .build(),
                     contentDescription = station.name,
                     modifier = Modifier
                         .fillMaxWidth()
@@ -69,12 +83,26 @@ fun StationDetailSheet(
                 Spacer(modifier = Modifier.height(16.dp))
             }
 
-            // 名前
-            Text(
-                text = station.name,
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold,
-            )
+            // 名前 + お気に入り
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = station.name,
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.weight(1f),
+                )
+                IconButton(onClick = onToggleFavorite) {
+                    Icon(
+                        imageVector = if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                        contentDescription = if (isFavorite) "お気に入り解除" else "お気に入り登録",
+                        tint = if (isFavorite) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
 
             Spacer(modifier = Modifier.height(8.dp))
 
@@ -168,4 +196,21 @@ fun StationDetailSheet(
             }
         }
     }
+}
+
+/**
+ * Wikimedia Commons の Special:FilePath/ URL を upload.wikimedia.org の直接URLに変換する。
+ * 例: https://commons.wikimedia.org/wiki/Special:FilePath/Example.jpg
+ *   → https://upload.wikimedia.org/wikipedia/commons/a/ab/Example.jpg
+ */
+private fun toWikimediaDirectUrl(url: String): String {
+    val prefix = "https://commons.wikimedia.org/wiki/Special:FilePath/"
+    if (!url.startsWith(prefix)) return url
+
+    val filename = url.removePrefix(prefix).replace(' ', '_')
+    val md5 = MessageDigest.getInstance("MD5")
+        .digest(filename.toByteArray())
+        .joinToString("") { "%02x".format(it) }
+
+    return "https://upload.wikimedia.org/wikipedia/commons/${md5[0]}/${md5[0]}${md5[1]}/$filename"
 }

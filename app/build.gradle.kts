@@ -62,7 +62,7 @@ dependencies {
     debugImplementation(libs.compose.ui.test.manifest)
 
     // MapLibre
-    implementation(libs.ramani.maplibre)
+    implementation(libs.maplibre.android)
 
     // Location
     implementation(libs.play.services.location)

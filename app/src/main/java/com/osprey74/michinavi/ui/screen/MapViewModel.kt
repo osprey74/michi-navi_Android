@@ -68,6 +68,10 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
     private val _isFollowingUser = MutableStateFlow(true)
     val isFollowingUser: StateFlow<Boolean> = _isFollowingUser.asStateFlow()
 
+    // お気に入り
+    val favoriteIds: StateFlow<Set<String>> = settingsRepository.favoriteIdsFlow
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptySet())
+
     init {
         // 位置情報の変化に応じて近隣道の駅を更新
         locationService.locationState
@@ -130,6 +134,17 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             settingsRepository.updateSettings(settings)
         }
+    }
+
+    fun toggleFavorite(stationId: String) {
+        viewModelScope.launch {
+            settingsRepository.toggleFavorite(stationId)
+        }
+    }
+
+    fun getFavoriteStations(): List<RoadsideStation> {
+        val ids = favoriteIds.value
+        return repository.allStations.filter { it.id in ids }
     }
 
     fun toggleZoomPosition() {

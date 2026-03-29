@@ -6,7 +6,9 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -29,11 +31,13 @@ private const val OPENFREEMAP_STYLE = "https://tiles.openfreemap.org/styles/libe
 private val DEFAULT_POSITION = LatLng(35.681236, 139.767125)
 private const val DEFAULT_ZOOM = 10.0
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MapScreen(viewModel: MapViewModel = viewModel()) {
     val locationState by viewModel.locationState.collectAsState()
     val visibleStations by viewModel.visibleStations.collectAsState()
     val poiItems by viewModel.poiItems.collectAsState()
+    val selectedStation by viewModel.selectedStation.collectAsState()
 
     var permissionGranted by remember { mutableStateOf(false) }
 
@@ -75,6 +79,9 @@ fun MapScreen(viewModel: MapViewModel = viewModel()) {
         }
     }
 
+    // 詳細シート
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
     Scaffold { innerPadding ->
         Box(
             modifier = Modifier
@@ -86,12 +93,16 @@ fun MapScreen(viewModel: MapViewModel = viewModel()) {
                 styleBuilder = Style.Builder().fromUri(OPENFREEMAP_STYLE),
                 cameraPosition = cameraPosition,
             ) {
-                // 道の駅ピン
+                // 道の駅ピン（タップで詳細シート表示）
                 visibleStations.forEach { station ->
                     Symbol(
                         center = LatLng(station.latitude, station.longitude),
                         size = 0.8f,
                         color = "#2196F3",
+                        onClick = {
+                            viewModel.selectStation(station)
+                            true
+                        },
                     )
                 }
 
@@ -104,6 +115,15 @@ fun MapScreen(viewModel: MapViewModel = viewModel()) {
                     )
                 }
             }
+        }
+
+        // 道の駅詳細ボトムシート
+        selectedStation?.let { station ->
+            StationDetailSheet(
+                station = station,
+                sheetState = sheetState,
+                onDismiss = { viewModel.selectStation(null) },
+            )
         }
     }
 }

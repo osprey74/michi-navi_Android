@@ -60,6 +60,10 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
     private val _autoZoomLevel = MutableStateFlow(latitudeDeltaToZoomLevel(MapConstants.WIDE_ZOOM_DEGREES))
     val autoZoomLevel: StateFlow<Float> = _autoZoomLevel.asStateFlow()
 
+    // 選択中の道の駅（詳細シート表示用）
+    private val _selectedStation = MutableStateFlow<RoadsideStation?>(null)
+    val selectedStation: StateFlow<RoadsideStation?> = _selectedStation.asStateFlow()
+
     // 位置追従モード
     private val _isFollowingUser = MutableStateFlow(true)
     val isFollowingUser: StateFlow<Boolean> = _isFollowingUser.asStateFlow()
@@ -112,6 +116,10 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
             )
             _poiItems.value = items
         }
+    }
+
+    fun selectStation(station: RoadsideStation?) {
+        _selectedStation.value = station
     }
 
     fun setFollowingUser(following: Boolean) {

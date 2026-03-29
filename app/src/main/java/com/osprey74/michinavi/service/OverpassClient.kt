@@ -6,9 +6,12 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import android.util.Log
 import java.net.HttpURLConnection
 import java.net.URL
 import java.net.URLEncoder
+
+private const val TAG = "OverpassClient"
 
 class OverpassClient {
 
@@ -64,7 +67,9 @@ class OverpassClient {
             connection.connectTimeout = TIMEOUT_MS
             connection.readTimeout = TIMEOUT_MS
             connection.requestMethod = "GET"
-            if (connection.responseCode != 200) {
+            val code = connection.responseCode
+            if (code != 200) {
+                Log.w(TAG, "Overpass API returned $code")
                 return ""
             }
             connection.inputStream.bufferedReader().use { it.readText() }

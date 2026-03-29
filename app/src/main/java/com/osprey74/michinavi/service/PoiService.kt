@@ -88,7 +88,8 @@ class PoiService {
 
         val fetched = try {
             client.fetchPois(uncachedCategories, paddedSouth, paddedWest, paddedNorth, paddedEast)
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            android.util.Log.w("PoiService", "POI fetch failed", e)
             emptyList()
         }
 

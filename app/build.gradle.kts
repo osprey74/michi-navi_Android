@@ -75,4 +75,7 @@ dependencies {
 
     // Coroutines
     implementation(libs.kotlinx.coroutines.android)
+
+    // Android Auto
+    implementation(libs.car.app)
 }

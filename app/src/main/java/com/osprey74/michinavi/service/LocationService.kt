@@ -14,12 +14,13 @@ import com.google.android.gms.location.LocationRequest
 import com.google.android.gms.location.LocationResult
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
-import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.onCompletion
+import kotlinx.coroutines.flow.onStart
+import java.util.concurrent.atomic.AtomicInteger
 
 data class LocationState(
     val latitude: Double = 0.0,
@@ -49,6 +50,8 @@ class LocationService(context: Context) {
     }.build()
 
     private var lastHeading: Double = 0.0
+    private val subscriberCount = AtomicInteger(0)
+    private var locationCallback: LocationCallback? = null
 
     private val compassListener = object : SensorEventListener {
         private val rotationMatrix = FloatArray(9)
@@ -70,35 +73,30 @@ class LocationService(context: Context) {
         override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
     }
 
-    /**
-     * 位置情報の更新を開始する Flow を返す。
-     * collect を中止すると自動的に更新が停止される。
-     */
     @SuppressLint("MissingPermission")
-    fun locationUpdates(): Flow<LocationState> = callbackFlow {
+    private fun startUpdates() {
+        if (locationCallback != null) return
+
         val callback = object : LocationCallback() {
             override fun onLocationResult(result: LocationResult) {
                 val location: Location = result.lastLocation ?: return
                 val speedKmh = if (location.speed < 0) 0.0 else location.speed * 3.6
-                val newState = _locationState.value.copy(
+                _locationState.value = _locationState.value.copy(
                     latitude = location.latitude,
                     longitude = location.longitude,
                     speedKmh = speedKmh,
                     accuracy = location.accuracy,
                 )
-                _locationState.value = newState
-                trySend(newState)
             }
         }
+        locationCallback = callback
 
-        // 位置情報の更新を開始
         fusedLocationClient.requestLocationUpdates(
             locationRequest,
             callback,
             Looper.getMainLooper(),
         )
 
-        // コンパスの更新を開始
         val rotationSensor = sensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR)
         rotationSensor?.let {
             sensorManager.registerListener(
@@ -107,10 +105,28 @@ class LocationService(context: Context) {
                 SensorManager.SENSOR_DELAY_UI,
             )
         }
-
-        awaitClose {
-            fusedLocationClient.removeLocationUpdates(callback)
-            sensorManager.unregisterListener(compassListener)
-        }
     }
+
+    private fun stopUpdates() {
+        locationCallback?.let { fusedLocationClient.removeLocationUpdates(it) }
+        locationCallback = null
+        sensorManager.unregisterListener(compassListener)
+    }
+
+    /**
+     * 位置情報の更新を共有する Flow を返す。
+     * 複数の collect が同時に可能（Phone + Car）。
+     * 最後の collect が中止されると自動的に更新が停止される。
+     */
+    fun locationUpdates(): Flow<LocationState> = locationState
+        .onStart {
+            if (subscriberCount.incrementAndGet() == 1) {
+                startUpdates()
+            }
+        }
+        .onCompletion {
+            if (subscriberCount.decrementAndGet() == 0) {
+                stopUpdates()
+            }
+        }
 }

@@ -43,7 +43,7 @@
 - [x] iOS版準拠ボタン配置 — 設定:左上, 操作ボタン:右下 (zoomPositionで左右切替可能)
 - [x] Google Maps タイル対応 — APIキー登録で Google Maps 地図タイル選択可能 (Map Tiles API セッション方式)
 - [x] 現在地マーカー — 青丸 (白フチ付き) で現在地を地図上に表示
-- [ ] 走行中 UI 最適化 — 大きなボタン, 高コントラスト, 音声読み上げ
+- [x] 走行中 UI 最適化 — 大きなボタン, 高コントラスト, 速度HUD, オートズーム, ヘディングアップ
 
 ### 優先度: 中
 - [ ] オフラインサポート — 道の駅データのオフライン利用 (POIキャッシュ永続化)
@@ -56,12 +56,12 @@
 - [ ] ウィジェット — ホーム画面ウィジェット (最寄り駅表示)
 - [ ] 訪問履歴 — 訪れた道の駅の記録
 - [ ] 写真投稿 / レビュー — ユーザー生成コンテンツ
-- [ ] Android Auto 対応
+- [x] Android Auto 対応 — CarAppService, 近くの道の駅リスト, ドライブ情報, ナビ連携
 - [ ] テスト追加 — Unit テスト & UI テスト
 
 ### 技術的改善
+- [ ] 道の駅マーカー改善 — Compose Canvas描画の最適化 (スクロール追従, クラスタリング)
 - [ ] エラーハンドリング強化 — Overpass API タイムアウト, ネットワークエラー表示
-- [ ] パフォーマンス最適化 — 大量マーカー時のクラスタリング
 - [ ] DI 導入 — Hilt/Koin によるDI整理
 - [ ] ProGuard / R8 設定 — リリースビルド最適化
 - [ ] CI/CD — GitHub Actions によるビルド & リリース自動化
@@ -73,6 +73,7 @@
 - [x] MapScreen CameraPosition — rememberSaveable → remember に変更 (Bundle非対応型のクラッシュ修正)
 - [x] MapLibre 実機クラッシュ修正 — ramani-compose → MapLibre SDK 直接利用に移行 (Style未ロード時のLocationComponent初期化クラッシュ回避)
 - [x] 駅選択時カメラ位置バグ — factory内初期カメラを選択駅>現在地>デフォルトの優先順に修正
+- [x] 道の駅マーカー表示不具合 — MapLibre GeoJSONソースの低ズーム描画問題を回避、Compose Canvas描画方式に移行
 
 ---
 
@@ -82,3 +83,5 @@
 - 2026-03-29: ramani-compose → MapLibre SDK 直接利用に移行 (実機クラッシュ修正), 道の駅写真表示修正 (Wikimedia直接URL変換)
 - 2026-03-29: 地図タイル切替 (GSI淡色/標準/航空写真/OpenFreeMap), 現在地ボタン, iOS版準拠ボタン配置, 駅選択時カメラ移動修正
 - 2026-03-29: Google Maps タイル対応 (APIキー+セッション方式), 現在地マーカー (青丸), APIキー設定UI改善
+- 2026-03-29: 走行中UI最適化 (オートズーム, ヘディングアップ, ボタン大型化, 速度HUD), Android Auto対応 (CarAppService, 道の駅リスト, ドライブ情報)
+- 2026-03-29: 道の駅マーカー修正 — MapLibre GeoJSONソース低ズーム描画問題をCompose Canvas描画で回避, 全1200駅表示対応

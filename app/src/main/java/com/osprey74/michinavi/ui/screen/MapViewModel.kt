@@ -7,13 +7,9 @@ import com.osprey74.michinavi.model.AppSettings
 import com.osprey74.michinavi.model.NearbyStation
 import com.osprey74.michinavi.model.PoiItem
 import com.osprey74.michinavi.model.RoadsideStation
-import com.osprey74.michinavi.service.LocationService
 import com.osprey74.michinavi.service.LocationState
 import com.osprey74.michinavi.service.MapConstants
-import com.osprey74.michinavi.service.PoiService
-import com.osprey74.michinavi.service.RoadsideStationRepository
-import com.osprey74.michinavi.service.RoadsideStationService
-import com.osprey74.michinavi.service.SettingsRepository
+import com.osprey74.michinavi.service.ServiceLocator
 import com.osprey74.michinavi.service.latitudeDeltaToZoomLevel
 import com.osprey74.michinavi.service.zoomLevelForSpeed
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -27,11 +23,11 @@ import kotlinx.coroutines.launch
 
 class MapViewModel(application: Application) : AndroidViewModel(application) {
 
-    private val repository = RoadsideStationRepository(application)
-    private val stationService = RoadsideStationService(repository)
-    val locationService = LocationService(application)
-    private val settingsRepository = SettingsRepository(application)
-    private val poiService = PoiService()
+    private val repository = ServiceLocator.roadsideStationRepository
+    private val stationService = ServiceLocator.roadsideStationService
+    val locationService = ServiceLocator.locationService
+    private val settingsRepository = ServiceLocator.settingsRepository
+    private val poiService = ServiceLocator.poiService
 
     // 位置情報
     val locationState: StateFlow<LocationState> = locationService.locationState
@@ -64,9 +60,17 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
     private val _selectedStation = MutableStateFlow<RoadsideStation?>(null)
     val selectedStation: StateFlow<RoadsideStation?> = _selectedStation.asStateFlow()
 
+    // 走行中判定
+    private val _isDriving = MutableStateFlow(false)
+    val isDriving: StateFlow<Boolean> = _isDriving.asStateFlow()
+
     // 位置追従モード
     private val _isFollowingUser = MutableStateFlow(true)
     val isFollowingUser: StateFlow<Boolean> = _isFollowingUser.asStateFlow()
+
+    // オートズーム一時停止
+    private val _isAutoZoomPaused = MutableStateFlow(false)
+    val isAutoZoomPaused: StateFlow<Boolean> = _isAutoZoomPaused.asStateFlow()
 
     // お気に入り
     val favoriteIds: StateFlow<Set<String>> = settingsRepository.favoriteIdsFlow
@@ -79,6 +83,7 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
                 if (loc.latitude != 0.0 || loc.longitude != 0.0) {
                     updateNearby(loc)
                     updateAutoZoom(loc.speedKmh)
+                    _isDriving.value = loc.speedKmh > MapConstants.SPEED_DRIVING_THRESHOLD_KMH
                 }
             }
             .launchIn(viewModelScope)
@@ -112,7 +117,12 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
         _visibleStations.value = stationService.updateVisibleStations(
             centerLat, centerLon, latitudeDelta, longitudeDelta,
         )
-        // POI取得（デバウンスはUI側で行う）
+        // POI取得: 広域表示（latDelta > ~0.05° ≒ zoom13未満）ではスキップ
+        val zoomLevel = latitudeDeltaToZoomLevel(latitudeDelta)
+        if (zoomLevel < 13f) {
+            _poiItems.value = emptyList()
+            return
+        }
         viewModelScope.launch {
             val categories = poiService.enabledCategories(settings.value)
             val items = poiService.fetchPois(
@@ -126,8 +136,20 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
         _selectedStation.value = station
     }
 
+    fun selectStationById(id: String) {
+        _selectedStation.value = repository.allStations.find { it.id == id }
+    }
+
     fun setFollowingUser(following: Boolean) {
         _isFollowingUser.value = following
+    }
+
+    fun pauseAutoZoom(durationMs: Long = 30_000L) {
+        _isAutoZoomPaused.value = true
+        viewModelScope.launch {
+            kotlinx.coroutines.delay(durationMs)
+            _isAutoZoomPaused.value = false
+        }
     }
 
     fun updateSettings(settings: AppSettings) {
@@ -159,4 +181,7 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
      * 都道府県→市町村→駅のグループ化（道の駅選択画面用）
      */
     fun stationsGroupedByPrefecture() = stationService.stationsGroupedByPrefecture()
+
+    /** 全道の駅リスト（地図一括プロット用） */
+    val allStations: List<RoadsideStation> get() = repository.allStations
 }

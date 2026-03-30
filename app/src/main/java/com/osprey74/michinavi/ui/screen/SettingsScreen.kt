@@ -26,7 +26,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
@@ -125,47 +124,6 @@ fun SettingsScreen(
                     modifier = Modifier.padding(start = 0.dp),
                 )
             }
-
-            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-
-            // POI表示
-            SectionHeader("施設表示")
-
-            PoiToggle(
-                label = "ガソリンスタンド",
-                checked = settings.showGasStations,
-                onCheckedChange = {
-                    viewModel.updateSettings(settings.copy(showGasStations = it))
-                },
-            )
-            PoiToggle(
-                label = "コンビニ",
-                checked = settings.showFoodMarkets,
-                onCheckedChange = {
-                    viewModel.updateSettings(settings.copy(showFoodMarkets = it))
-                },
-            )
-            PoiToggle(
-                label = "レストラン",
-                checked = settings.showRestaurants,
-                onCheckedChange = {
-                    viewModel.updateSettings(settings.copy(showRestaurants = it))
-                },
-            )
-            PoiToggle(
-                label = "駐車場",
-                checked = settings.showParking,
-                onCheckedChange = {
-                    viewModel.updateSettings(settings.copy(showParking = it))
-                },
-            )
-            PoiToggle(
-                label = "RVパーク",
-                checked = settings.showRvParks,
-                onCheckedChange = {
-                    viewModel.updateSettings(settings.copy(showRvParks = it))
-                },
-            )
 
             HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 
@@ -274,16 +232,3 @@ private fun SectionHeader(title: String) {
     )
 }
 
-@Composable
-private fun PoiToggle(
-    label: String,
-    checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit,
-) {
-    ListItem(
-        headlineContent = { Text(label) },
-        trailingContent = {
-            Switch(checked = checked, onCheckedChange = onCheckedChange)
-        },
-    )
-}

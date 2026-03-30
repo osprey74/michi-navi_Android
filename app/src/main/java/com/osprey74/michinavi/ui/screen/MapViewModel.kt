@@ -5,7 +5,6 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.osprey74.michinavi.model.AppSettings
 import com.osprey74.michinavi.model.NearbyStation
-import com.osprey74.michinavi.model.PoiItem
 import com.osprey74.michinavi.model.RoadsideStation
 import com.osprey74.michinavi.service.LocationState
 import com.osprey74.michinavi.service.MapConstants
@@ -27,7 +26,6 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
     private val stationService = ServiceLocator.roadsideStationService
     val locationService = ServiceLocator.locationService
     private val settingsRepository = ServiceLocator.settingsRepository
-    private val poiService = ServiceLocator.poiService
 
     // 位置情報
     val locationState: StateFlow<LocationState> = locationService.locationState
@@ -47,10 +45,6 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
     // ビューポート内道の駅（地図表示用）
     private val _visibleStations = MutableStateFlow<List<RoadsideStation>>(emptyList())
     val visibleStations: StateFlow<List<RoadsideStation>> = _visibleStations.asStateFlow()
-
-    // POI（施設スポット）
-    private val _poiItems = MutableStateFlow<List<PoiItem>>(emptyList())
-    val poiItems: StateFlow<List<PoiItem>> = _poiItems.asStateFlow()
 
     // 速度連動オートズーム
     private val _autoZoomLevel = MutableStateFlow(latitudeDeltaToZoomLevel(MapConstants.WIDE_ZOOM_DEGREES))
@@ -74,6 +68,10 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
 
     // お気に入り
     val favoriteIds: StateFlow<Set<String>> = settingsRepository.favoriteIdsFlow
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptySet())
+
+    // 到達リスト
+    val visitedIds: StateFlow<Set<String>> = settingsRepository.visitedIdsFlow
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptySet())
 
     init {
@@ -105,9 +103,6 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
         _autoZoomLevel.value = latitudeDeltaToZoomLevel(latDelta)
     }
 
-    /**
-     * 地図のビューポートが変わった時に呼ばれる
-     */
     fun onMapRegionChanged(
         centerLat: Double,
         centerLon: Double,
@@ -117,19 +112,6 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
         _visibleStations.value = stationService.updateVisibleStations(
             centerLat, centerLon, latitudeDelta, longitudeDelta,
         )
-        // POI取得: 広域表示（latDelta > ~0.05° ≒ zoom13未満）ではスキップ
-        val zoomLevel = latitudeDeltaToZoomLevel(latitudeDelta)
-        if (zoomLevel < 13f) {
-            _poiItems.value = emptyList()
-            return
-        }
-        viewModelScope.launch {
-            val categories = poiService.enabledCategories(settings.value)
-            val items = poiService.fetchPois(
-                categories, centerLat, centerLon, latitudeDelta, longitudeDelta,
-            )
-            _poiItems.value = items
-        }
     }
 
     fun selectStation(station: RoadsideStation?) {
@@ -164,8 +146,19 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun toggleVisited(stationId: String) {
+        viewModelScope.launch {
+            settingsRepository.toggleVisited(stationId)
+        }
+    }
+
     fun getFavoriteStations(): List<RoadsideStation> {
         val ids = favoriteIds.value
+        return repository.allStations.filter { it.id in ids }
+    }
+
+    fun getVisitedStations(): List<RoadsideStation> {
+        val ids = visitedIds.value
         return repository.allStations.filter { it.id in ids }
     }
 
@@ -177,11 +170,7 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    /**
-     * 都道府県→市町村→駅のグループ化（道の駅選択画面用）
-     */
     fun stationsGroupedByPrefecture() = stationService.stationsGroupedByPrefecture()
 
-    /** 全道の駅リスト（地図一括プロット用） */
     val allStations: List<RoadsideStation> get() = repository.allStations
 }

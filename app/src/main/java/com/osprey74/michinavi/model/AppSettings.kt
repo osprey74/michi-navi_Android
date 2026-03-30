@@ -4,9 +4,4 @@ data class AppSettings(
     val zoomPosition: String = "right",
     val mapTileType: String = "gsi_pale",
     val googleMapsApiKey: String = "",
-    val showGasStations: Boolean = true,
-    val showFoodMarkets: Boolean = false,
-    val showRestaurants: Boolean = false,
-    val showParking: Boolean = false,
-    val showRvParks: Boolean = true,
 )

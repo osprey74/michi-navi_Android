@@ -10,6 +10,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Beenhere
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -30,6 +31,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.osprey74.michinavi.model.RoadsideStation
 
@@ -42,6 +44,7 @@ fun StationPickerScreen(
 ) {
     val grouped = remember { viewModel.stationsGroupedByPrefecture() }
     val favoriteIds by viewModel.favoriteIds.collectAsState()
+    val visitedIds by viewModel.visitedIds.collectAsState()
 
     var selectedTab by remember { mutableIntStateOf(0) }
     var selectedPrefecture by remember { mutableStateOf<String?>(null) }
@@ -49,6 +52,7 @@ fun StationPickerScreen(
 
     val title = when {
         selectedTab == 1 -> "お気に入り"
+        selectedTab == 2 -> "到達リスト"
         selectedMunicipality != null -> selectedMunicipality!!
         selectedPrefecture != null -> selectedPrefecture!!
         else -> "道の駅を選択"
@@ -93,10 +97,23 @@ fun StationPickerScreen(
                         Icon(
                             imageVector = Icons.Default.Favorite,
                             contentDescription = null,
-                            modifier = androidx.compose.ui.Modifier.padding(end = 4.dp),
+                            modifier = Modifier.padding(end = 4.dp),
                         )
                     },
                     text = { Text("お気に入り") },
+                )
+                Tab(
+                    selected = selectedTab == 2,
+                    onClick = { selectedTab = 2 },
+                    icon = {
+                        Icon(
+                            imageVector = Icons.Default.Beenhere,
+                            contentDescription = null,
+                            tint = Color(0xFF2196F3),
+                            modifier = Modifier.padding(end = 4.dp),
+                        )
+                    },
+                    text = { Text("到達") },
                 )
             }
 
@@ -134,16 +151,7 @@ fun StationPickerScreen(
                 1 -> {
                     val favorites = remember(favoriteIds) { viewModel.getFavoriteStations() }
                     if (favorites.isEmpty()) {
-                        Box(
-                            modifier = Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Text(
-                                text = "お気に入りの道の駅はまだありません",
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
+                        EmptyMessage("お気に入りの道の駅はまだありません")
                     } else {
                         StationList(
                             stations = favorites,
@@ -151,8 +159,33 @@ fun StationPickerScreen(
                         )
                     }
                 }
+                2 -> {
+                    val visited = remember(visitedIds) { viewModel.getVisitedStations() }
+                    if (visited.isEmpty()) {
+                        EmptyMessage("到達した道の駅はまだありません")
+                    } else {
+                        StationList(
+                            stations = visited,
+                            onStationClick = onStationSelected,
+                        )
+                    }
+                }
             }
         }
+    }
+}
+
+@Composable
+private fun EmptyMessage(text: String) {
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }
 

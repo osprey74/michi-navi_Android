@@ -1,7 +1,6 @@
 package com.osprey74.michinavi.ui.screen
 
 import android.Manifest
-import android.widget.Toast
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -12,7 +11,6 @@ import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -22,19 +20,20 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Beenhere
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.ui.graphics.drawscope.translate
+import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
@@ -61,7 +60,6 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
-import com.osprey74.michinavi.service.latitudeDeltaToZoomLevel
 import org.maplibre.android.MapLibre
 import org.maplibre.android.camera.CameraPosition
 import org.maplibre.android.camera.CameraUpdateFactory
@@ -78,12 +76,6 @@ import org.maplibre.geojson.Point
 private val DEFAULT_POSITION = LatLng(35.681236, 139.767125)
 private const val DEFAULT_ZOOM = 9.4
 
-private const val STATION_SOURCE = "station-source"
-private const val STATION_LAYER = "station-layer"
-private const val POI_SOURCE = "poi-source"
-private const val POI_LAYER = "poi-layer"
-private const val STATION_LABEL_LAYER = "station-label-layer"
-private const val POI_LABEL_LAYER = "poi-label-layer"
 private const val USER_LOCATION_SOURCE = "user-location-source"
 private const val USER_LOCATION_LAYER = "user-location-layer"
 private const val USER_LOCATION_OUTLINE_LAYER = "user-location-outline-layer"
@@ -100,6 +92,11 @@ private fun tileUrl(tileType: String, apiKey: String, session: String?): String 
         else -> "https://cyberjapandata.gsi.go.jp/xyz/pale/{z}/{x}/{y}.png"
     }
 }
+
+/** OpenFreeMap はベクタータイルなので専用スタイルURLを使う */
+private const val OFM_STYLE_URL = "https://tiles.openfreemap.org/styles/liberty"
+
+private fun isVectorTileType(tileType: String): Boolean = tileType == "openfreemap"
 
 /**
  * 道の駅データ・全レイヤーを含む完全なスタイルJSONを構築
@@ -121,10 +118,6 @@ private fun buildFullStyleJson(
       "tileSize": 256,
       "maxzoom": 18
     },
-    "$POI_SOURCE": {
-      "type": "geojson",
-      "data": {"type": "FeatureCollection", "features": []}
-    },
     "$USER_LOCATION_SOURCE": {
       "type": "geojson",
       "data": {"type": "FeatureCollection", "features": []}
@@ -135,38 +128,6 @@ private fun buildFullStyleJson(
       "id": "raster-layer",
       "type": "raster",
       "source": "raster-tiles"
-    },
-    {
-      "id": "$POI_LAYER",
-      "type": "circle",
-      "source": "$POI_SOURCE",
-      "minzoom": 13,
-      "paint": {
-        "circle-radius": 5,
-        "circle-color": ["get", "color"],
-        "circle-stroke-width": 1,
-        "circle-stroke-color": "#FFFFFF"
-      }
-    },
-    {
-      "id": "$POI_LABEL_LAYER",
-      "type": "symbol",
-      "source": "$POI_SOURCE",
-      "minzoom": 14,
-      "layout": {
-        "text-field": ["get", "name"],
-        "text-font": ["Open Sans Regular"],
-        "text-size": 11,
-        "text-offset": [0, 1.2],
-        "text-anchor": "top",
-        "text-allow-overlap": false,
-        "text-optional": true
-      },
-      "paint": {
-        "text-color": "#333333",
-        "text-halo-color": "#FFFFFF",
-        "text-halo-width": 1
-      }
     },
     {
       "id": "$USER_LOCATION_OUTLINE_LAYER",
@@ -233,13 +194,14 @@ fun MapScreen(
     val locationState by viewModel.locationState.collectAsState()
     val selectedStation by viewModel.selectedStation.collectAsState()
     val favoriteIds by viewModel.favoriteIds.collectAsState()
+    val visitedIds by viewModel.visitedIds.collectAsState()
     val settings by viewModel.settings.collectAsState()
     val isDriving by viewModel.isDriving.collectAsState()
     val autoZoomLevel by viewModel.autoZoomLevel.collectAsState()
     val isFollowingUser by viewModel.isFollowingUser.collectAsState()
     val isAutoZoomPaused by viewModel.isAutoZoomPaused.collectAsState()
 
-    // マーカー更新用コルーチンスコープ（非同期データ: 位置情報・POI）
+    // マーカー更新用コルーチンスコープ（非同期データ: 位置情報）
     val markerScope = remember { mutableStateOf<CoroutineScope?>(null) }
     DisposableEffect(Unit) {
         onDispose { markerScope.value?.cancel() }
@@ -273,7 +235,10 @@ fun MapScreen(
     var styleReady by remember { mutableStateOf(false) }
     var debugZoom by remember { mutableStateOf(0.0) }
     // 道の駅スクリーン座標（Compose Canvas描画用）
-    data class StationMarker(val x: Float, val y: Float, val name: String, val id: String)
+    data class StationMarker(
+        val x: Float, val y: Float, val name: String, val id: String,
+        val isFavorite: Boolean, val isVisited: Boolean,
+    )
     var stationMarkers by remember { mutableStateOf<List<StationMarker>>(emptyList()) }
     var isMapMoving by remember { mutableStateOf(false) }
     val allStations = remember { viewModel.allStations }
@@ -366,6 +331,9 @@ fun MapScreen(
         if (settings.mapTileType != currentTileType) {
             mapRef?.let { map ->
                 styleReady = false
+                // 旧スタイルのオブザーバーを即座にキャンセル（旧Styleへのアクセスを防ぐ）
+                markerScope.value?.cancel()
+                markerScope.value = null
                 currentTileType = settings.mapTileType
                 applyMapStyle(
                     map, context, settings.mapTileType,
@@ -374,9 +342,40 @@ fun MapScreen(
                 ) { style ->
                     styleReady = true
                     startMarkerObservers(markerScope, style, viewModel)
+                    // スタイル切替後にビューポート更新をトリガー（onCameraIdleは発火しないため）
+                    val bounds = map.projection.visibleRegion.latLngBounds
+                    val center = map.cameraPosition.target
+                    if (center != null) {
+                        viewModel.onMapRegionChanged(
+                            centerLat = center.latitude,
+                            centerLon = center.longitude,
+                            latitudeDelta = bounds.latitudeSpan,
+                            longitudeDelta = bounds.longitudeSpan,
+                        )
+                    }
                 }
             }
         }
+    }
+
+
+    // お気に入り/到達リスト変更時にマーカーの状態を更新
+    LaunchedEffect(favoriteIds, visitedIds, mapRef) {
+        val map = mapRef ?: return@LaunchedEffect
+        val bounds = map.projection.visibleRegion.latLngBounds
+        val padLat = bounds.latitudeSpan * 0.1
+        val padLon = bounds.longitudeSpan * 0.1
+        stationMarkers = allStations
+            .filter { s ->
+                s.latitude in (bounds.latitudeSouth - padLat)..(bounds.latitudeNorth + padLat) &&
+                    s.longitude in (bounds.longitudeWest - padLon)..(bounds.longitudeEast + padLon)
+            }
+            .map { s ->
+                val sp = map.projection.toScreenLocation(LatLng(s.latitude, s.longitude))
+                StationMarker(sp.x, sp.y, s.name, s.id,
+                    isFavorite = s.id in favoriteIds,
+                    isVisited = s.id in visitedIds)
+            }
     }
 
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -401,7 +400,7 @@ fun MapScreen(
                                 map, ctx, initialTileType,
                             ) { style ->
                                 styleReady = true
-                                // 非同期データ（位置・POI）の監視開始
+                                // 非同期データ（位置情報）の監視開始
                                 startMarkerObservers(markerScope, style, viewModel)
                             }
 
@@ -425,7 +424,7 @@ fun MapScreen(
                             }
 
                             // 道の駅スクリーン座標を更新
-                            val updateStationMarkers = {
+                            val updateMarkers = {
                                 val bounds = map.projection.visibleRegion.latLngBounds
                                 val padLat = bounds.latitudeSpan * 0.1
                                 val padLon = bounds.longitudeSpan * 0.1
@@ -436,11 +435,13 @@ fun MapScreen(
                                     }
                                     .map { s ->
                                         val sp = map.projection.toScreenLocation(LatLng(s.latitude, s.longitude))
-                                        StationMarker(sp.x, sp.y, s.name, s.id)
+                                        StationMarker(sp.x, sp.y, s.name, s.id,
+                                            isFavorite = s.id in favoriteIds,
+                                            isVisited = s.id in visitedIds)
                                     }
                             }
 
-                            // ビューポート変更時にPOI再取得 + 道の駅描画更新
+                            // ビューポート変更時に道の駅描画更新
                             val notifyRegionChanged = {
                                 val bounds = map.projection.visibleRegion.latLngBounds
                                 val center = map.cameraPosition.target
@@ -452,7 +453,7 @@ fun MapScreen(
                                         longitudeDelta = bounds.longitudeSpan,
                                     )
                                 }
-                                updateStationMarkers()
+                                updateMarkers()
                             }
                             map.addOnCameraIdleListener {
                                 debugZoom = map.cameraPosition.zoom
@@ -470,7 +471,7 @@ fun MapScreen(
                                 }
                             }
 
-                            // タップ検出（道の駅 → POI）
+                            // タップ検出（道の駅）
                             map.addOnMapClickListener { point ->
                                 val screenPoint = map.projection.toScreenLocation(point)
                                 // 道の駅タップ（Canvas描画のマーカーとの距離で判定）
@@ -484,15 +485,6 @@ fun MapScreen(
                                     viewModel.selectStationById(tapped.id)
                                     return@addOnMapClickListener true
                                 }
-                                // POIタップ
-                                val poiFeatures = map.queryRenderedFeatures(screenPoint, POI_LAYER)
-                                if (poiFeatures.isNotEmpty()) {
-                                    val name = poiFeatures[0].getStringProperty("name") ?: ""
-                                    val category = poiFeatures[0].getStringProperty("category") ?: ""
-                                    val text = if (name.isNotEmpty()) "$category: $name" else category
-                                    Toast.makeText(ctx, text, Toast.LENGTH_SHORT).show()
-                                    return@addOnMapClickListener true
-                                }
                                 false
                             }
                         }
@@ -500,7 +492,11 @@ fun MapScreen(
                 },
             )
 
-            // 道の駅マーカー（Compose Canvas描画）
+            // 道の駅マーカー（Material Icons + Canvas描画）
+            // デフォルト=緑 location_on, お気に入り=赤 favorite, 到達=緑 beenhere, お気に入り+到達=赤 beenhere
+            val iconLocationOn = rememberVectorPainter(Icons.Filled.LocationOn)
+            val iconFavorite = rememberVectorPainter(Icons.Filled.Favorite)
+            val iconBeenhere = rememberVectorPainter(Icons.Filled.Beenhere)
             val labelPaint = remember {
                 android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
                     textSize = 32f
@@ -517,17 +513,39 @@ fun MapScreen(
                     strokeWidth = 4f
                 }
             }
+            val statusBarHeightPx = with(androidx.compose.ui.platform.LocalDensity.current) {
+                val resourceId = context.resources.getIdentifier("status_bar_height", "dimen", "android")
+                if (resourceId > 0) context.resources.getDimensionPixelSize(resourceId).toFloat()
+                else 24.dp.toPx()
+            }
             if (!isMapMoving) {
+                val colorDefault = Color(0xFFFF9800) // オレンジ
+                val colorFavorite = Color(0xFFF44336) // 赤
+                val colorVisited = Color(0xFF2196F3) // 青
                 androidx.compose.foundation.Canvas(modifier = Modifier.fillMaxSize()) {
-                    val fillColor = Color(0xFFFF9800)
-                    val strokeColor = Color.White
-                    val r = 8.dp.toPx()
-                    val sw = 2.dp.toPx()
-                    val labelOffsetY = r + 16.dp.toPx()
+                    val iconSize = 26.dp.toPx()  // 20dp * 1.3
+                    val labelOffsetY = iconSize * 0.5f + 16.dp.toPx()
                     stationMarkers.forEach { m ->
-                        val center = androidx.compose.ui.geometry.Offset(m.x, m.y)
-                        drawCircle(strokeColor, radius = r + sw, center = center)
-                        drawCircle(fillColor, radius = r, center = center)
+                        // ステータスバー領域内のマーカーは描画しない
+                        if (m.y - iconSize < statusBarHeightPx && m.y < statusBarHeightPx) return@forEach
+                        val fillColor = when {
+                            m.isFavorite && m.isVisited -> colorFavorite
+                            m.isFavorite -> colorFavorite
+                            m.isVisited -> colorVisited
+                            else -> colorDefault
+                        }
+                        val icon = when {
+                            m.isVisited -> iconBeenhere
+                            m.isFavorite -> iconFavorite
+                            else -> iconLocationOn
+                        }
+                        // アイコンをマーカー位置に描画（中央揃え）
+                        translate(left = m.x - iconSize / 2f, top = m.y - iconSize) {
+                            with(icon) {
+                                draw(size = androidx.compose.ui.geometry.Size(iconSize, iconSize),
+                                    colorFilter = androidx.compose.ui.graphics.ColorFilter.tint(fillColor))
+                            }
+                        }
                     }
                     if (debugZoom >= 10) {
                         drawIntoCanvas { canvas ->
@@ -584,73 +602,6 @@ fun MapScreen(
                 verticalArrangement = Arrangement.spacedBy(8.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                // 広域 / 詳細 ズームボタン
-                Surface(
-                    shape = RoundedCornerShape(12.dp),
-                    color = drivingContainerColor,
-                    shadowElevation = 4.dp,
-                ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(buttonSize)
-                                .clickable {
-                                    viewModel.pauseAutoZoom()
-                                    val target = if (hasLocation) {
-                                        LatLng(locationState.latitude, locationState.longitude)
-                                    } else {
-                                        mapRef?.cameraPosition?.target ?: DEFAULT_POSITION
-                                    }
-                                    val zoom = latitudeDeltaToZoomLevel(
-                                        com.osprey74.michinavi.service.MapConstants.WIDE_ZOOM_DEGREES
-                                    ).toDouble()
-                                    mapRef?.animateCamera(
-                                        CameraUpdateFactory.newLatLngZoom(target, zoom), 500
-                                    )
-                                },
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Text(
-                                text = "広域",
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = drivingContentColor,
-                            )
-                        }
-                        HorizontalDivider(
-                            modifier = Modifier.width(buttonSize),
-                            color = drivingContentColor.copy(alpha = 0.2f),
-                        )
-                        Box(
-                            modifier = Modifier
-                                .size(buttonSize)
-                                .clickable {
-                                    viewModel.pauseAutoZoom()
-                                    val target = if (hasLocation) {
-                                        LatLng(locationState.latitude, locationState.longitude)
-                                    } else {
-                                        mapRef?.cameraPosition?.target ?: DEFAULT_POSITION
-                                    }
-                                    val zoom = latitudeDeltaToZoomLevel(
-                                        com.osprey74.michinavi.service.MapConstants.DETAIL_ZOOM_DEGREES
-                                    ).toDouble()
-                                    mapRef?.animateCamera(
-                                        CameraUpdateFactory.newLatLngZoom(target, zoom), 500
-                                    )
-                                },
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Text(
-                                text = "詳細",
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = drivingContentColor,
-                            )
-                        }
-                    }
-                }
                 // 道の駅リスト
                 FloatingActionButton(
                     onClick = onOpenStationPicker,
@@ -672,7 +623,7 @@ fun MapScreen(
                             mapRef?.animateCamera(
                                 CameraUpdateFactory.newLatLngZoom(
                                     LatLng(locationState.latitude, locationState.longitude),
-                                    14.0,
+                                    8.0,
                                 )
                             )
                         }
@@ -739,7 +690,9 @@ fun MapScreen(
                 station = station,
                 sheetState = sheetState,
                 isFavorite = station.id in favoriteIds,
+                isVisited = station.id in visitedIds,
                 onToggleFavorite = { viewModel.toggleFavorite(station.id) },
+                onToggleVisited = { viewModel.toggleVisited(station.id) },
                 onDismiss = { viewModel.selectStation(null) },
             )
         }
@@ -754,14 +707,43 @@ private fun applyMapStyle(
     googleMapsSession: String? = null,
     onReady: (Style) -> Unit,
 ) {
-    val tType = if (tileType == "openfreemap") "gsi_pale" else tileType
-    val styleJson = buildFullStyleJson(tType, apiKey = googleMapsApiKey, session = googleMapsSession)
-    map.setStyle(Style.Builder().fromJson(styleJson)) { style ->
-        onReady(style)
+    if (isVectorTileType(tileType)) {
+        // OpenFreeMap: ベクタータイルスタイルをロード後、位置レイヤーを追加
+        map.setStyle(Style.Builder().fromUri(OFM_STYLE_URL)) { style ->
+            addOverlayLayers(style)
+            onReady(style)
+        }
+    } else {
+        val styleJson = buildFullStyleJson(tileType, apiKey = googleMapsApiKey, session = googleMapsSession)
+        map.setStyle(Style.Builder().fromJson(styleJson)) { style ->
+            onReady(style)
+        }
     }
 }
 
-/** 非同期データ（現在地・POI）の監視を開始 */
+/** ベクタータイルスタイルに現在地レイヤーを追加する */
+private fun addOverlayLayers(style: Style) {
+    val emptyFc = FeatureCollection.fromFeatures(emptyList())
+    style.addSource(GeoJsonSource(USER_LOCATION_SOURCE, emptyFc))
+
+    // 現在地マーカー（白フチ）
+    style.addLayer(
+        org.maplibre.android.style.layers.CircleLayer(USER_LOCATION_OUTLINE_LAYER, USER_LOCATION_SOURCE).withProperties(
+            org.maplibre.android.style.layers.PropertyFactory.circleRadius(10f),
+            org.maplibre.android.style.layers.PropertyFactory.circleColor("#FFFFFF"),
+        )
+    )
+
+    // 現在地マーカー（青丸）
+    style.addLayer(
+        org.maplibre.android.style.layers.CircleLayer(USER_LOCATION_LAYER, USER_LOCATION_SOURCE).withProperties(
+            org.maplibre.android.style.layers.PropertyFactory.circleRadius(7f),
+            org.maplibre.android.style.layers.PropertyFactory.circleColor("#4285F4"),
+        )
+    )
+}
+
+/** 非同期データ（現在地）の監視を開始 */
 private fun startMarkerObservers(
     scopeHolder: androidx.compose.runtime.MutableState<CoroutineScope?>,
     style: Style,
@@ -772,28 +754,14 @@ private fun startMarkerObservers(
         scope.launch {
             viewModel.locationState.collect { loc ->
                 if (loc.latitude == 0.0 && loc.longitude == 0.0) return@collect
-                val source = style.getSourceAs<GeoJsonSource>(USER_LOCATION_SOURCE)
+                val source = try {
+                    style.getSourceAs<GeoJsonSource>(USER_LOCATION_SOURCE)
+                } catch (_: IllegalStateException) { null }
                     ?: return@collect
                 val point = Point.fromLngLat(loc.longitude, loc.latitude)
                 source.setGeoJson(
                     FeatureCollection.fromFeatures(listOf(Feature.fromGeometry(point)))
                 )
-            }
-        }
-        scope.launch {
-            viewModel.poiItems.collect { pois ->
-                val source = style.getSourceAs<GeoJsonSource>(POI_SOURCE)
-                    ?: return@collect
-                val features = pois.map { poi ->
-                    Feature.fromGeometry(
-                        Point.fromLngLat(poi.longitude, poi.latitude)
-                    ).apply {
-                        addStringProperty("color", poi.category.color)
-                        addStringProperty("name", poi.name ?: poi.category.label)
-                        addStringProperty("category", poi.category.label)
-                    }
-                }
-                source.setGeoJson(FeatureCollection.fromFeatures(features))
             }
         }
     }

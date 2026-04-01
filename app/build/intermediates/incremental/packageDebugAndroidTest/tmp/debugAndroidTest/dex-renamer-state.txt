@@ -1,0 +1,7 @@
+#Sun Mar 29 23:34:22 JST 2026
+base.1=G\:\\dev\\michi-navi_Android\\app\\build\\intermediates\\dex\\debugAndroidTest\\mergeProjectDexDebugAndroidTest\\9\\classes.dex
+path.1=9/classes.dex
+base.0=G\:\\dev\\michi-navi_Android\\app\\build\\intermediates\\dex\\debugAndroidTest\\mergeProjectDexDebugAndroidTest\\0\\classes.dex
+renamed.1=classes2.dex
+renamed.0=classes.dex
+path.0=0/classes.dex

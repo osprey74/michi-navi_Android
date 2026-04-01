@@ -1,0 +1,19 @@
+{
+    "logs": [
+        {
+            "outputFile": "com.osprey74.michinavi.app-mergeDebugResources-61:/values-v30/values-v30.xml",
+            "map": [
+                {
+                    "source": "C:\\Users\\ospre\\.gradle\\caches\\8.11.1\\transforms\\02c038ca2bff75b32a0e1b3ad408efe4\\transformed\\material3-release\\res\\values-v30\\values-v30.xml",
+                    "from": {
+                        "startLines": "2",
+                        "startColumns": "4",
+                        "startOffsets": "55",
+                        "endColumns": "72",
+                        "endOffsets": "123"
+                    }
+                }
+            ]
+        }
+    ]
+}

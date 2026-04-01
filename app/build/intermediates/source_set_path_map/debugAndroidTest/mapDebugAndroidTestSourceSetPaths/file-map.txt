@@ -1,0 +1,4 @@
+com.osprey74.michinavi.test.app-androidTest-0 G:\dev\michi-navi_Android\app\build\generated\res\resValues\androidTest\debug
+com.osprey74.michinavi.test.app-mergeDebugAndroidTestResources-1 G:\dev\michi-navi_Android\app\build\intermediates\incremental\debugAndroidTest\mergeDebugAndroidTestResources\merged.dir
+com.osprey74.michinavi.test.app-mergeDebugAndroidTestResources-2 G:\dev\michi-navi_Android\app\build\intermediates\incremental\debugAndroidTest\mergeDebugAndroidTestResources\stripped.dir
+com.osprey74.michinavi.test.app-debugAndroidTest-3 G:\dev\michi-navi_Android\app\build\intermediates\merged_res\debugAndroidTest\mergeDebugAndroidTestResources

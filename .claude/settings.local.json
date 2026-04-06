@@ -58,7 +58,14 @@
       "Bash(xargs cat:*)",
       "Bash(grep -r triggerRepaint app/build/ --include=*.java --include=*.kt -l)",
       "Read(//mnt/e/Downloads/**)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(./gradlew:*)",
+      "Bash(/mnt/c/Users/ospre/AppData/Local/Android/Sdk/emulator/emulator.exe:*)",
+      "Bash(export JAVA_HOME=\"/mnt/c/Program Files/Android/Android Studio/jbr\")",
+      "Bash(export ANDROID_HOME=\"/mnt/c/Users/ospre/AppData/Local/Android/Sdk\")",
+      "Bash(/mnt/c/Users/ospre/AppData/Local/Android/Sdk/platform-tools/adb.exe install:*)",
+      "Bash(/mnt/c/Users/ospre/AppData/Local/Android/Sdk/platform-tools/adb.exe devices:*)",
+      "Bash(/mnt/c/Users/ospre/AppData/Local/Android/Sdk/platform-tools/adb.exe:*)"
     ]
   }
 }

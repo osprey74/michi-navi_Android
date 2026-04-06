@@ -11,8 +11,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -22,9 +20,10 @@ import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.outlined.Beenhere
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
@@ -42,6 +41,7 @@ import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.osprey74.michinavi.model.Feature
+import com.osprey74.michinavi.model.NearbyStation
 import com.osprey74.michinavi.model.RoadsideStation
 import java.security.MessageDigest
 
@@ -52,6 +52,7 @@ fun StationDetailSheet(
     sheetState: SheetState,
     isFavorite: Boolean,
     isVisited: Boolean,
+    nearby: NearbyStation? = null,
     onToggleFavorite: () -> Unit,
     onToggleVisited: () -> Unit,
     onDismiss: () -> Unit,
@@ -88,59 +89,83 @@ fun StationDetailSheet(
                 Spacer(modifier = Modifier.height(16.dp))
             }
 
-            // 名前 + お気に入り
+            // 名前
+            Text(
+                text = station.name,
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold,
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // お気に入り・到達ボタン（iOS準拠の横並び）
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                Text(
-                    text = station.name,
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold,
+                OutlinedButton(
+                    onClick = onToggleFavorite,
                     modifier = Modifier.weight(1f),
-                )
-                IconButton(onClick = onToggleVisited) {
-                    Icon(
-                        imageVector = if (isVisited) Icons.Filled.Beenhere else Icons.Outlined.Beenhere,
-                        contentDescription = if (isVisited) "到達解除" else "到達登録",
-                        tint = if (isVisited) Color(0xFF2196F3) else MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-                IconButton(onClick = onToggleFavorite) {
+                    colors = if (isFavorite) {
+                        ButtonDefaults.outlinedButtonColors(
+                            contentColor = MaterialTheme.colorScheme.error,
+                        )
+                    } else {
+                        ButtonDefaults.outlinedButtonColors()
+                    },
+                ) {
                     Icon(
                         imageVector = if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                        contentDescription = if (isFavorite) "お気に入り解除" else "お気に入り登録",
+                        contentDescription = null,
                         tint = if (isFavorite) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
                     )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(if (isFavorite) "お気に入り済み" else "お気に入りに追加")
+                }
+                OutlinedButton(
+                    onClick = onToggleVisited,
+                    modifier = Modifier.weight(1f),
+                    colors = if (isVisited) {
+                        ButtonDefaults.outlinedButtonColors(
+                            contentColor = Color(0xFF2196F3),
+                        )
+                    } else {
+                        ButtonDefaults.outlinedButtonColors()
+                    },
+                ) {
+                    Icon(
+                        imageVector = if (isVisited) Icons.Filled.Beenhere else Icons.Outlined.Beenhere,
+                        contentDescription = null,
+                        tint = if (isVisited) Color(0xFF2196F3) else MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(if (isVisited) "到達済み" else "到達済みにする")
                 }
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(12.dp))
+            HorizontalDivider()
+            Spacer(modifier = Modifier.height(12.dp))
 
-            // 住所（都道府県 + 市町村）
+            // 基本情報
+            nearby?.let { ns ->
+                InfoRow("距離", ns.distanceText)
+                InfoRow("方角", ns.cardinalDirection)
+            }
+            station.roadName?.let { road ->
+                InfoRow("路線", road)
+            }
             val address = listOfNotNull(station.prefecture, station.municipality).joinToString(" ")
             if (address.isNotBlank()) {
-                Text(
-                    text = address,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+                InfoRow("所在地", address)
             }
 
-            // 路線名
-            station.roadName?.let { road ->
-                Text(
-                    text = road,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // 施設アイコン
+            // 施設・設備
             if (station.features.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(12.dp))
+                HorizontalDivider()
+                Spacer(modifier = Modifier.height(12.dp))
+
                 Text(
                     text = "施設・設備",
                     style = MaterialTheme.typography.titleSmall,
@@ -161,59 +186,86 @@ fun StationDetailSheet(
                         }
                     }
                 }
-                Spacer(modifier = Modifier.height(16.dp))
             }
 
-            // ボタン行
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                // 公式サイト
-                station.url?.let { url ->
-                    OutlinedButton(
-                        onClick = {
-                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
-                            context.startActivity(intent)
-                        },
-                        modifier = Modifier.weight(1f),
-                    ) {
-                        Text("公式サイト")
-                    }
-                }
+            // フォトアルバム
+            Spacer(modifier = Modifier.height(12.dp))
+            HorizontalDivider()
+            Spacer(modifier = Modifier.height(12.dp))
 
-                // 地図で開く（Google Maps Intent）
-                Button(
+            Text(
+                text = "フォトアルバム",
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            StationPhotoAlbum(stationId = station.id)
+
+            // 公式サイト・ナビボタン
+            Spacer(modifier = Modifier.height(12.dp))
+            HorizontalDivider()
+            Spacer(modifier = Modifier.height(12.dp))
+
+            station.url?.let { url ->
+                OutlinedButton(
                     onClick = {
-                        val uri = Uri.parse(
-                            "google.navigation:q=${station.latitude},${station.longitude}"
-                        )
-                        val intent = Intent(Intent.ACTION_VIEW, uri).apply {
-                            setPackage("com.google.android.apps.maps")
-                        }
-                        if (intent.resolveActivity(context.packageManager) != null) {
-                            context.startActivity(intent)
-                        } else {
-                            // Google Maps がなければブラウザで開く
-                            val browserUri = Uri.parse(
-                                "https://www.google.com/maps/dir/?api=1&destination=${station.latitude},${station.longitude}"
-                            )
-                            context.startActivity(Intent(Intent.ACTION_VIEW, browserUri))
-                        }
+                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+                        context.startActivity(intent)
                     },
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.fillMaxWidth(),
                 ) {
-                    Text("ナビ開始")
+                    Text("公式サイトを開く")
                 }
+                Spacer(modifier = Modifier.height(8.dp))
+            }
+
+            Button(
+                onClick = {
+                    val uri = Uri.parse(
+                        "google.navigation:q=${station.latitude},${station.longitude}",
+                    )
+                    val intent = Intent(Intent.ACTION_VIEW, uri).apply {
+                        setPackage("com.google.android.apps.maps")
+                    }
+                    if (intent.resolveActivity(context.packageManager) != null) {
+                        context.startActivity(intent)
+                    } else {
+                        val browserUri = Uri.parse(
+                            "https://www.google.com/maps/dir/?api=1&destination=${station.latitude},${station.longitude}",
+                        )
+                        context.startActivity(Intent(Intent.ACTION_VIEW, browserUri))
+                    }
+                },
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text("この道の駅へナビ開始")
             }
         }
     }
 }
 
+@Composable
+private fun InfoRow(label: String, value: String) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Text(
+            text = value,
+            style = MaterialTheme.typography.bodyMedium,
+        )
+    }
+}
+
 /**
  * Wikimedia Commons の Special:FilePath/ URL を upload.wikimedia.org の直接URLに変換する。
- * 例: https://commons.wikimedia.org/wiki/Special:FilePath/Example.jpg
- *   → https://upload.wikimedia.org/wikipedia/commons/a/ab/Example.jpg
  */
 private fun toWikimediaDirectUrl(url: String): String {
     val prefix = "https://commons.wikimedia.org/wiki/Special:FilePath/"

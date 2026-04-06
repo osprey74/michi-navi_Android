@@ -299,27 +299,18 @@ fun MapScreen(
         }
     }
 
-    // 走行中カメラ制御（オートズーム + ヘディングアップ）
+    // 走行中カメラ制御（オートズーム + ヘディングアップ）— 走行中のみ連続追従
     LaunchedEffect(locationState, isDriving, isFollowingUser, isAutoZoomPaused) {
-        if (!isFollowingUser || !hasLocation) return@LaunchedEffect
+        if (!isDriving || !isFollowingUser || !hasLocation) return@LaunchedEffect
         mapRef?.let { map ->
-            if (isDriving) {
-                val builder = CameraPosition.Builder()
-                    .target(LatLng(locationState.latitude, locationState.longitude))
-                    .bearing(locationState.heading.toFloat().toDouble())
-                    .tilt(45.0)
-                if (!isAutoZoomPaused) {
-                    builder.zoom(autoZoomLevel.toDouble())
-                }
-                map.animateCamera(CameraUpdateFactory.newCameraPosition(builder.build()), 500)
-            } else {
-                val cameraPosition = CameraPosition.Builder()
-                    .target(LatLng(locationState.latitude, locationState.longitude))
-                    .bearing(0.0)
-                    .tilt(0.0)
-                    .build()
-                map.animateCamera(CameraUpdateFactory.newCameraPosition(cameraPosition), 500)
+            val builder = CameraPosition.Builder()
+                .target(LatLng(locationState.latitude, locationState.longitude))
+                .bearing(locationState.heading.toFloat().toDouble())
+                .tilt(45.0)
+            if (!isAutoZoomPaused) {
+                builder.zoom(autoZoomLevel.toDouble())
             }
+            map.animateCamera(CameraUpdateFactory.newCameraPosition(builder.build()), 500)
         }
     }
 
@@ -415,7 +406,7 @@ fun MapScreen(
                                 )
                                 loc.latitude != 0.0 || loc.longitude != 0.0 -> map.moveCamera(
                                     CameraUpdateFactory.newLatLngZoom(
-                                        LatLng(loc.latitude, loc.longitude), 14.0
+                                        LatLng(loc.latitude, loc.longitude), 8.0
                                     )
                                 )
                                 else -> map.moveCamera(
@@ -619,13 +610,18 @@ fun MapScreen(
                 FloatingActionButton(
                     onClick = {
                         if (hasLocation) {
-                            viewModel.setFollowingUser(true)
+                            val zoom = if (isDriving) autoZoomLevel.toDouble() else 8.0
+                            val cp = CameraPosition.Builder()
+                                .target(LatLng(locationState.latitude, locationState.longitude))
+                                .zoom(zoom)
+                                .bearing(if (isDriving) locationState.heading else 0.0)
+                                .tilt(if (isDriving) 45.0 else 0.0)
+                                .build()
                             mapRef?.animateCamera(
-                                CameraUpdateFactory.newLatLngZoom(
-                                    LatLng(locationState.latitude, locationState.longitude),
-                                    8.0,
-                                )
+                                CameraUpdateFactory.newCameraPosition(cp),
+                                500,
                             )
+                            viewModel.setFollowingUser(true)
                         }
                     },
                     modifier = Modifier.size(buttonSize),
@@ -671,17 +667,6 @@ fun MapScreen(
                 )
             }
 
-            // デバッグ: 現在のズームレベル表示
-            Text(
-                text = "zoom: ${"%.1f".format(debugZoom)}",
-                fontSize = 12.sp,
-                color = Color.White,
-                modifier = Modifier
-                    .align(Alignment.BottomStart)
-                    .padding(start = 8.dp, bottom = 8.dp)
-                    .background(Color.Black.copy(alpha = 0.6f), RoundedCornerShape(4.dp))
-                    .padding(horizontal = 6.dp, vertical = 2.dp),
-            )
         }
 
         // 道の駅詳細ボトムシート

@@ -116,6 +116,9 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
 
     fun selectStation(station: RoadsideStation?) {
         _selectedStation.value = station
+        if (station != null) {
+            _isFollowingUser.value = false
+        }
     }
 
     fun selectStationById(id: String) {

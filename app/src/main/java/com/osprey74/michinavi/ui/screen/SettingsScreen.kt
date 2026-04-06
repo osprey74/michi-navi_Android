@@ -13,6 +13,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Clear
+import androidx.compose.foundation.text.ClickableText
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
@@ -23,9 +24,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SegmentedButton
-import androidx.compose.material3.SegmentedButtonDefaults
-import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
@@ -37,8 +35,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -70,33 +73,6 @@ fun SettingsScreen(
                 .padding(innerPadding)
                 .verticalScroll(rememberScrollState()),
         ) {
-            // ズームボタン位置
-            SectionHeader("ズームボタン位置")
-            SingleChoiceSegmentedButtonRow(
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-            ) {
-                SegmentedButton(
-                    selected = settings.zoomPosition == "left",
-                    onClick = {
-                        viewModel.updateSettings(settings.copy(zoomPosition = "left"))
-                    },
-                    shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
-                ) {
-                    Text("左")
-                }
-                SegmentedButton(
-                    selected = settings.zoomPosition == "right",
-                    onClick = {
-                        viewModel.updateSettings(settings.copy(zoomPosition = "right"))
-                    },
-                    shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
-                ) {
-                    Text("右")
-                }
-            }
-
-            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-
             // 地図タイル
             SectionHeader("地図タイル")
             val baseTileOptions = listOf(
@@ -214,6 +190,84 @@ fun SettingsScreen(
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
                 )
             }
+
+            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+
+            // クレジット
+            SectionHeader("クレジット")
+
+            Text(
+                text = "Michi-Navi v1.0.0",
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 2.dp),
+            )
+            Text(
+                text = "© 2026 osprey74",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 2.dp),
+            )
+
+            Spacer(modifier = Modifier.padding(bottom = 8.dp))
+
+            Text(
+                text = "道の駅データ出典：",
+                style = MaterialTheme.typography.bodySmall,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 2.dp),
+            )
+            Text(
+                text = "一般社団法人 全国道の駅連絡会",
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 2.dp),
+            )
+            val uriHandler = LocalUriHandler.current
+            val michiNoEkiLink = buildAnnotatedString {
+                pushStringAnnotation(tag = "URL", annotation = "http://www.michi-no-eki.jp/")
+                withStyle(
+                    SpanStyle(
+                        color = MaterialTheme.colorScheme.primary,
+                        textDecoration = TextDecoration.Underline,
+                    ),
+                ) {
+                    append("http://www.michi-no-eki.jp/")
+                }
+                pop()
+            }
+            ClickableText(
+                text = michiNoEkiLink,
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 2.dp),
+                onClick = { offset ->
+                    michiNoEkiLink.getStringAnnotations("URL", offset, offset)
+                        .firstOrNull()?.let { uriHandler.openUri(it.item) }
+                },
+            )
+
+            Spacer(modifier = Modifier.padding(bottom = 8.dp))
+
+            val flaticonLink = buildAnnotatedString {
+                pushStringAnnotation(tag = "URL", annotation = "https://www.flaticon.com/free-icons/navigation")
+                withStyle(
+                    SpanStyle(
+                        color = MaterialTheme.colorScheme.primary,
+                        textDecoration = TextDecoration.Underline,
+                    ),
+                ) {
+                    append("Navigation icons created by ChilliColor - Flaticon")
+                }
+                pop()
+            }
+            ClickableText(
+                text = flaticonLink,
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 2.dp),
+                onClick = { offset ->
+                    flaticonLink.getStringAnnotations("URL", offset, offset)
+                        .firstOrNull()?.let { uriHandler.openUri(it.item) }
+                },
+            )
 
             // 下部余白
             Spacer(modifier = Modifier.padding(bottom = 16.dp))

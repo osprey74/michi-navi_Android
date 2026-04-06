@@ -57,7 +57,8 @@
       "Bash(find /mnt/g/dev/michi-navi_Android/app/src/main/java/com/osprey74/michinavi/data/model -type f -name *.kt)",
       "Bash(xargs cat:*)",
       "Bash(grep -r triggerRepaint app/build/ --include=*.java --include=*.kt -l)",
-      "Read(//mnt/e/Downloads/**)"
+      "Read(//mnt/e/Downloads/**)",
+      "Bash(find:*)"
     ]
   }
 }

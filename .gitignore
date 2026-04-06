@@ -17,3 +17,6 @@ local.properties
 *.aab
 *.ap_
 *.dex
+*.jks
+*.keystore
+Michi-Navi_Androdi_KeyStore.jsk

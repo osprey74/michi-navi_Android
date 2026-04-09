@@ -19,6 +19,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Beenhere
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.Signpost
@@ -62,11 +63,12 @@ fun UnifiedPickerScreen(
     viewModel: MapViewModel,
     onStationSelected: (RoadsideStation) -> Unit,
     onSignSelected: (CountrySign) -> Unit,
+    onCloseToMapStation: (RoadsideStation) -> Unit,
+    onCloseToMapSign: (CountrySign) -> Unit,
     onOpenRandomDraw: () -> Unit,
     onBack: () -> Unit,
 ) {
     val showCountrySignMarkers by viewModel.showCountrySignMarkers.collectAsState()
-    // 0 = 道の駅, 1 = カントリーサイン
     var segment by remember { mutableIntStateOf(0) }
 
     // 道の駅 state
@@ -76,14 +78,23 @@ fun UnifiedPickerScreen(
     var stationTab by remember { mutableIntStateOf(0) }
     var selectedPrefecture by remember { mutableStateOf<String?>(null) }
     var selectedMunicipality by remember { mutableStateOf<String?>(null) }
+    // 道の駅インライン詳細
+    var detailStation by remember { mutableStateOf<RoadsideStation?>(null) }
 
     // CS state
     val favoriteSignIds by viewModel.favoriteSignIds.collectAsState()
     val visitedSignIds by viewModel.visitedSignIds.collectAsState()
     var signTab by remember { mutableIntStateOf(0) }
     var selectedSubprefecture by remember { mutableStateOf<String?>(null) }
+    // CSインライン詳細
+    var detailSign by remember { mutableStateOf<CountrySign?>(null) }
 
-    val title = if (segment == 0) {
+    // タイトル
+    val title = if (detailStation != null) {
+        detailStation!!.name
+    } else if (detailSign != null) {
+        detailSign!!.name
+    } else if (segment == 0) {
         when {
             selectedMunicipality != null -> selectedMunicipality!!
             selectedPrefecture != null -> selectedPrefecture!!
@@ -96,17 +107,14 @@ fun UnifiedPickerScreen(
         }
     }
 
-    val onNavigateBack: () -> Unit = if (segment == 0) {
-        when {
-            selectedMunicipality != null -> { { selectedMunicipality = null } }
-            selectedPrefecture != null -> { { selectedPrefecture = null } }
-            else -> onBack
-        }
-    } else {
-        when {
-            selectedSubprefecture != null -> { { selectedSubprefecture = null } }
-            else -> onBack
-        }
+    // 戻る処理
+    val onNavigateBack: () -> Unit = when {
+        detailStation != null -> { { detailStation = null } }
+        detailSign != null -> { { detailSign = null } }
+        segment == 0 && selectedMunicipality != null -> { { selectedMunicipality = null } }
+        segment == 0 && selectedPrefecture != null -> { { selectedPrefecture = null } }
+        segment == 1 && selectedSubprefecture != null -> { { selectedSubprefecture = null } }
+        else -> onBack
     }
 
     Scaffold(
@@ -119,8 +127,15 @@ fun UnifiedPickerScreen(
                     }
                 },
                 actions = {
-                    // CSタブ表示時のみランダムドローボタン
-                    if (segment == 1 && showCountrySignMarkers) {
+                    if (detailStation != null) {
+                        IconButton(onClick = { onCloseToMapStation(detailStation!!) }) {
+                            Icon(Icons.Default.Close, "閉じる")
+                        }
+                    } else if (detailSign != null) {
+                        IconButton(onClick = { onCloseToMapSign(detailSign!!) }) {
+                            Icon(Icons.Default.Close, "閉じる")
+                        }
+                    } else if (segment == 1 && showCountrySignMarkers) {
                         IconButton(onClick = onOpenRandomDraw) {
                             Icon(Icons.Default.Style, "ランダムカード")
                         }
@@ -130,55 +145,82 @@ fun UnifiedPickerScreen(
         },
     ) { innerPadding ->
         Column(modifier = Modifier.padding(innerPadding)) {
-            // セグメント切替（道の駅 / カントリーサイン）
-            if (showCountrySignMarkers) {
-                SingleChoiceSegmentedButtonRow(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
-                ) {
-                    SegmentedButton(
-                        selected = segment == 0,
-                        onClick = { segment = 0 },
-                        shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
-                        icon = { Icon(Icons.Default.Map, null, modifier = Modifier.size(18.dp)) },
-                    ) { Text("道の駅") }
-                    SegmentedButton(
-                        selected = segment == 1,
-                        onClick = { segment = 1 },
-                        shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
-                        icon = { Icon(Icons.Default.Signpost, null, modifier = Modifier.size(18.dp)) },
-                    ) { Text("カントリーサイン") }
-                }
-            }
-
-            if (segment == 0) {
-                // --- 道の駅 ---
-                StationTabContent(
-                    viewModel = viewModel,
-                    grouped = stationGrouped,
-                    favoriteIds = favoriteIds,
-                    visitedIds = visitedIds,
-                    selectedTab = stationTab,
-                    onTabChange = { stationTab = it },
-                    selectedPrefecture = selectedPrefecture,
-                    onPrefectureSelected = { selectedPrefecture = it },
-                    selectedMunicipality = selectedMunicipality,
-                    onMunicipalitySelected = { selectedMunicipality = it },
-                    onStationSelected = onStationSelected,
+            // 詳細表示中はセグメント/タブを非表示
+            if (detailStation != null) {
+                // 道の駅インライン詳細
+                val station = detailStation!!
+                StationDetailContent(
+                    station = station,
+                    isFavorite = station.id in favoriteIds,
+                    isVisited = station.id in visitedIds,
+                    onToggleFavorite = { viewModel.toggleFavorite(station.id) },
+                    onToggleVisited = { viewModel.toggleVisited(station.id) },
+                    onShowOnMap = {
+                        onStationSelected(station)
+                    },
+                )
+            } else if (detailSign != null) {
+                // CSインライン詳細
+                val sign = detailSign!!
+                CountrySignDetailContent(
+                    sign = sign,
+                    isFavorite = sign.id in favoriteSignIds,
+                    isVisited = sign.id in visitedSignIds,
+                    onToggleFavorite = { viewModel.toggleFavoriteSign(sign.id) },
+                    onToggleVisited = { viewModel.toggleVisitedSign(sign.id) },
+                    onShowOnMap = {
+                        onSignSelected(sign)
+                    },
                 )
             } else {
-                // --- カントリーサイン ---
-                SignTabContent(
-                    viewModel = viewModel,
-                    favoriteSignIds = favoriteSignIds,
-                    visitedSignIds = visitedSignIds,
-                    selectedTab = signTab,
-                    onTabChange = { signTab = it },
-                    selectedSubprefecture = selectedSubprefecture,
-                    onSubprefectureSelected = { selectedSubprefecture = it },
-                    onSignSelected = onSignSelected,
-                )
+                // セグメント切替
+                if (showCountrySignMarkers) {
+                    SingleChoiceSegmentedButtonRow(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                    ) {
+                        SegmentedButton(
+                            selected = segment == 0,
+                            onClick = { segment = 0 },
+                            shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
+                            icon = { Icon(Icons.Default.Map, null, modifier = Modifier.size(18.dp)) },
+                        ) { Text("道の駅") }
+                        SegmentedButton(
+                            selected = segment == 1,
+                            onClick = { segment = 1 },
+                            shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
+                            icon = { Icon(Icons.Default.Signpost, null, modifier = Modifier.size(18.dp)) },
+                        ) { Text("カントリーサイン") }
+                    }
+                }
+
+                if (segment == 0) {
+                    StationTabContent(
+                        viewModel = viewModel,
+                        grouped = stationGrouped,
+                        favoriteIds = favoriteIds,
+                        visitedIds = visitedIds,
+                        selectedTab = stationTab,
+                        onTabChange = { stationTab = it },
+                        selectedPrefecture = selectedPrefecture,
+                        onPrefectureSelected = { selectedPrefecture = it },
+                        selectedMunicipality = selectedMunicipality,
+                        onMunicipalitySelected = { selectedMunicipality = it },
+                        onStationSelected = { detailStation = it },
+                    )
+                } else {
+                    SignTabContent(
+                        viewModel = viewModel,
+                        favoriteSignIds = favoriteSignIds,
+                        visitedSignIds = visitedSignIds,
+                        selectedTab = signTab,
+                        onTabChange = { signTab = it },
+                        selectedSubprefecture = selectedSubprefecture,
+                        onSubprefectureSelected = { selectedSubprefecture = it },
+                        onSignSelected = { detailSign = it },
+                    )
+                }
             }
         }
     }
@@ -203,16 +245,12 @@ private fun StationTabContent(
     TabRow(selectedTabIndex = selectedTab) {
         Tab(selected = selectedTab == 0, onClick = { onTabChange(0) }, text = { Text("一覧") })
         Tab(
-            selected = selectedTab == 1,
-            onClick = { onTabChange(1) },
-            icon = { Icon(Icons.Default.Favorite, null) },
-            text = { Text("お気に入り") },
+            selected = selectedTab == 1, onClick = { onTabChange(1) },
+            icon = { Icon(Icons.Default.Favorite, null) }, text = { Text("お気に入り") },
         )
         Tab(
-            selected = selectedTab == 2,
-            onClick = { onTabChange(2) },
-            icon = { Icon(Icons.Default.Beenhere, null, tint = Color(0xFF2196F3)) },
-            text = { Text("踏破済み") },
+            selected = selectedTab == 2, onClick = { onTabChange(2) },
+            icon = { Icon(Icons.Default.Beenhere, null, tint = Color(0xFF2196F3)) }, text = { Text("踏破済み") },
         )
     }
 
@@ -235,19 +273,13 @@ private fun StationTabContent(
         }
         1 -> {
             val favorites = remember(favoriteIds) { viewModel.getFavoriteStations() }
-            if (favorites.isEmpty()) {
-                SimpleEmptyState("お気に入りの道の駅はまだありません")
-            } else {
-                StationListSection(stations = favorites, onStationClick = onStationSelected)
-            }
+            if (favorites.isEmpty()) SimpleEmptyState("お気に入りの道の駅はまだありません")
+            else StationListSection(stations = favorites, onStationClick = onStationSelected)
         }
         2 -> {
             val visited = remember(visitedIds) { viewModel.getVisitedStations() }
-            if (visited.isEmpty()) {
-                SimpleEmptyState("踏破した道の駅はまだありません")
-            } else {
-                StationListSection(stations = visited, onStationClick = onStationSelected)
-            }
+            if (visited.isEmpty()) SimpleEmptyState("踏破した道の駅はまだありません")
+            else StationListSection(stations = visited, onStationClick = onStationSelected)
         }
     }
 }
@@ -290,31 +322,20 @@ private fun SignTabContent(
                 val signs = grouped[selectedSubprefecture] ?: emptyList()
                 LazyColumn(modifier = Modifier.fillMaxSize()) {
                     items(signs) { sign ->
-                        SignListRow(
-                            sign = sign,
-                            isFavorite = sign.id in favoriteSignIds,
-                            isVisited = sign.id in visitedSignIds,
-                            onClick = { onSignSelected(sign) },
-                        )
+                        SignListRow(sign = sign, isFavorite = sign.id in favoriteSignIds, isVisited = sign.id in visitedSignIds, onClick = { onSignSelected(sign) })
                     }
                 }
             }
         }
         1 -> {
             val favorites = remember(favoriteSignIds) { viewModel.getFavoriteCountrySigns() }
-            if (favorites.isEmpty()) {
-                EmptyStateWithIcon(icon = Icons.Default.Favorite, title = "お気に入りなし", message = "詳細画面でハートボタンをタップすると追加されます")
-            } else {
-                SignListSection(signs = favorites, favoriteIds = favoriteSignIds, visitedIds = visitedSignIds, onSignSelected = onSignSelected)
-            }
+            if (favorites.isEmpty()) EmptyStateWithIcon(icon = Icons.Default.Favorite, title = "お気に入りなし", message = "詳細画面でハートボタンをタップすると追加されます")
+            else SignListSection(signs = favorites, favoriteIds = favoriteSignIds, visitedIds = visitedSignIds, onSignSelected = onSignSelected)
         }
         2 -> {
             val visited = remember(visitedSignIds) { viewModel.getVisitedCountrySigns() }
-            if (visited.isEmpty()) {
-                EmptyStateWithIcon(icon = Icons.Default.Beenhere, title = "踏破記録なし", message = "詳細画面でチェックボタンをタップすると追加されます")
-            } else {
-                SignListSection(signs = visited, favoriteIds = favoriteSignIds, visitedIds = visitedSignIds, onSignSelected = onSignSelected)
-            }
+            if (visited.isEmpty()) EmptyStateWithIcon(icon = Icons.Default.Beenhere, title = "踏破記録なし", message = "詳細画面でチェックボタンをタップすると追加されます")
+            else SignListSection(signs = visited, favoriteIds = favoriteSignIds, visitedIds = visitedSignIds, onSignSelected = onSignSelected)
         }
     }
 }
@@ -322,45 +343,21 @@ private fun SignTabContent(
 // ==================== 共通コンポーネント ====================
 
 @Composable
-private fun SignListRow(
-    sign: CountrySign,
-    isFavorite: Boolean,
-    isVisited: Boolean,
-    onClick: () -> Unit,
-) {
+private fun SignListRow(sign: CountrySign, isFavorite: Boolean, isVisited: Boolean, onClick: () -> Unit) {
     val context = LocalContext.current
     val thumbnail = remember(sign.imageName) {
         sign.imageName?.let { name ->
-            try {
-                context.assets.open("country_signs/$name.jpg").use {
-                    BitmapFactory.decodeStream(it)
-                }
-            } catch (_: Exception) { null }
+            try { context.assets.open("country_signs/$name.jpg").use { BitmapFactory.decodeStream(it) } } catch (_: Exception) { null }
         }
     }
-
     ListItem(
         headlineContent = { Text(sign.name) },
-        supportingContent = {
-            Text(
-                "${sign.subprefectureOffice} / ${sign.municipalityType}",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        },
+        supportingContent = { Text("${sign.subprefectureOffice} / ${sign.municipalityType}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) },
         leadingContent = {
             if (thumbnail != null) {
-                Image(
-                    bitmap = thumbnail.asImageBitmap(),
-                    contentDescription = sign.name,
-                    modifier = Modifier.size(40.dp).clip(RoundedCornerShape(6.dp)),
-                    contentScale = ContentScale.Fit,
-                )
+                Image(bitmap = thumbnail.asImageBitmap(), contentDescription = sign.name, modifier = Modifier.size(40.dp).clip(RoundedCornerShape(6.dp)), contentScale = ContentScale.Fit)
             } else {
-                Box(
-                    modifier = Modifier.size(40.dp).clip(RoundedCornerShape(6.dp)).background(MaterialTheme.colorScheme.surfaceVariant),
-                    contentAlignment = Alignment.Center,
-                ) {
+                Box(modifier = Modifier.size(40.dp).clip(RoundedCornerShape(6.dp)).background(MaterialTheme.colorScheme.surfaceVariant), contentAlignment = Alignment.Center) {
                     Icon(Icons.Outlined.Image, null, modifier = Modifier.size(20.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
@@ -378,12 +375,7 @@ private fun SignListRow(
 }
 
 @Composable
-private fun SignListSection(
-    signs: List<CountrySign>,
-    favoriteIds: Set<String>,
-    visitedIds: Set<String>,
-    onSignSelected: (CountrySign) -> Unit,
-) {
+private fun SignListSection(signs: List<CountrySign>, favoriteIds: Set<String>, visitedIds: Set<String>, onSignSelected: (CountrySign) -> Unit) {
     LazyColumn(modifier = Modifier.fillMaxSize()) {
         items(signs) { sign ->
             SignListRow(sign = sign, isFavorite = sign.id in favoriteIds, isVisited = sign.id in visitedIds, onClick = { onSignSelected(sign) })
@@ -425,16 +417,8 @@ private fun SimpleEmptyState(text: String) {
 }
 
 @Composable
-private fun EmptyStateWithIcon(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    title: String,
-    message: String,
-) {
-    Column(
-        modifier = Modifier.fillMaxSize().padding(32.dp),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
+private fun EmptyStateWithIcon(icon: androidx.compose.ui.graphics.vector.ImageVector, title: String, message: String) {
+    Column(modifier = Modifier.fillMaxSize().padding(32.dp), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
         Icon(imageVector = icon, contentDescription = null, modifier = Modifier.size(48.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
         Text(text = title, style = MaterialTheme.typography.titleMedium, textAlign = TextAlign.Center, modifier = Modifier.padding(top = 16.dp))
         Text(text = message, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center, modifier = Modifier.padding(top = 8.dp))

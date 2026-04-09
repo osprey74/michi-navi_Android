@@ -41,10 +41,19 @@ class MainActivity : ComponentActivity() {
                         viewModel = viewModel,
                         onStationSelected = { station ->
                             viewModel.selectStation(station)
+                            viewModel.setFollowingUser(false)
                             currentScreen = Screen.Map
                         },
                         onSignSelected = { sign ->
                             viewModel.selectSign(sign)
+                            viewModel.focusSign(sign)
+                            currentScreen = Screen.Map
+                        },
+                        onCloseToMapStation = { station ->
+                            viewModel.focusStation(station)
+                            currentScreen = Screen.Map
+                        },
+                        onCloseToMapSign = { sign ->
                             viewModel.focusSign(sign)
                             currentScreen = Screen.Map
                         },

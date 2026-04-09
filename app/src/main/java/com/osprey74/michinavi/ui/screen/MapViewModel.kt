@@ -91,6 +91,10 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
     private val _mapFocusSign = MutableStateFlow<CountrySign?>(null)
     val mapFocusSign: StateFlow<CountrySign?> = _mapFocusSign.asStateFlow()
 
+    // 地図フォーカス要求（道の駅の位置にカメラ移動、詳細シートは開かない）
+    private val _mapFocusStation = MutableStateFlow<RoadsideStation?>(null)
+    val mapFocusStation: StateFlow<RoadsideStation?> = _mapFocusStation.asStateFlow()
+
     // CS お気に入り
     val favoriteSignIds: StateFlow<Set<String>> = settingsRepository.favoriteSignIdsFlow
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptySet())
@@ -236,6 +240,14 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
 
     fun clearFocusSign() {
         _mapFocusSign.value = null
+    }
+
+    fun focusStation(station: RoadsideStation) {
+        _mapFocusStation.value = station
+    }
+
+    fun clearFocusStation() {
+        _mapFocusStation.value = null
     }
 
     fun toggleFavoriteSign(signId: String) {

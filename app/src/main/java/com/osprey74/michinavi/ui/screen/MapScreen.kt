@@ -212,6 +212,7 @@ fun MapScreen(
     val visitedSignIds by viewModel.visitedSignIds.collectAsState()
     val showCountrySignMarkers by viewModel.showCountrySignMarkers.collectAsState()
     val mapFocusSign by viewModel.mapFocusSign.collectAsState()
+    val mapFocusStation by viewModel.mapFocusStation.collectAsState()
 
     // マーカー更新用コルーチンスコープ（非同期データ: 位置情報）
     val markerScope = remember { mutableStateOf<CoroutineScope?>(null) }
@@ -352,21 +353,35 @@ fun MapScreen(
         selectedStation?.let { station ->
             mapRef?.animateCamera(
                 CameraUpdateFactory.newLatLngZoom(
-                    LatLng(station.latitude, station.longitude), 14.0
+                    LatLng(station.latitude, station.longitude), 11.0
                 )
             )
         }
     }
 
     // カントリーサインフォーカス要求でカメラ移動
-    LaunchedEffect(mapFocusSign) {
+    LaunchedEffect(mapFocusSign, mapRef) {
+        val map = mapRef ?: return@LaunchedEffect
         mapFocusSign?.let { sign ->
-            mapRef?.animateCamera(
+            map.animateCamera(
                 CameraUpdateFactory.newLatLngZoom(
                     LatLng(sign.centroidLat, sign.centroidLon), 11.0
                 )
             )
             viewModel.clearFocusSign()
+        }
+    }
+
+    // 道の駅フォーカス要求でカメラ移動（詳細シートは開かない）
+    LaunchedEffect(mapFocusStation, mapRef) {
+        val map = mapRef ?: return@LaunchedEffect
+        mapFocusStation?.let { station ->
+            map.animateCamera(
+                CameraUpdateFactory.newLatLngZoom(
+                    LatLng(station.latitude, station.longitude), 11.0
+                )
+            )
+            viewModel.clearFocusStation()
         }
     }
 
@@ -499,7 +514,7 @@ fun MapScreen(
                             when {
                                 station != null -> map.moveCamera(
                                     CameraUpdateFactory.newLatLngZoom(
-                                        LatLng(station.latitude, station.longitude), 14.0
+                                        LatLng(station.latitude, station.longitude), 11.0
                                     )
                                 )
                                 loc.latitude != 0.0 || loc.longitude != 0.0 -> map.moveCamera(

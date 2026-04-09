@@ -212,13 +212,27 @@ fun SettingsScreen(
             Spacer(modifier = Modifier.padding(bottom = 8.dp))
 
             Text(
+                text = "カントリーサイン画像出典：",
+                style = MaterialTheme.typography.bodySmall,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 2.dp),
+            )
+            Text(
+                text = "北海道開発局（利用許諾済み）\n大空町・本別町・今金町（個別利用許諾済み）",
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 2.dp),
+            )
+
+            Spacer(modifier = Modifier.padding(bottom = 8.dp))
+
+            Text(
                 text = "道の駅データ出典：",
                 style = MaterialTheme.typography.bodySmall,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 2.dp),
             )
             Text(
-                text = "一般社団法人 全国道の駅連絡会",
+                text = "一般社団法人 全国道の駅連絡会（利用許諾済み）",
                 style = MaterialTheme.typography.bodySmall,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 2.dp),
             )

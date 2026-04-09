@@ -11,11 +11,12 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.osprey74.michinavi.ui.screen.MapScreen
 import com.osprey74.michinavi.ui.screen.MapViewModel
+import com.osprey74.michinavi.ui.screen.RandomSignDrawScreen
 import com.osprey74.michinavi.ui.screen.SettingsScreen
-import com.osprey74.michinavi.ui.screen.StationPickerScreen
+import com.osprey74.michinavi.ui.screen.UnifiedPickerScreen
 import com.osprey74.michinavi.ui.theme.MichiNaviTheme
 
-private enum class Screen { Map, Settings, StationPicker }
+private enum class Screen { Map, Settings, Picker, RandomDraw }
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -30,19 +31,37 @@ class MainActivity : ComponentActivity() {
                     Screen.Map -> MapScreen(
                         viewModel = viewModel,
                         onOpenSettings = { currentScreen = Screen.Settings },
-                        onOpenStationPicker = { currentScreen = Screen.StationPicker },
+                        onOpenPicker = { currentScreen = Screen.Picker },
                     )
                     Screen.Settings -> SettingsScreen(
                         viewModel = viewModel,
                         onBack = { currentScreen = Screen.Map },
                     )
-                    Screen.StationPicker -> StationPickerScreen(
+                    Screen.Picker -> UnifiedPickerScreen(
                         viewModel = viewModel,
                         onStationSelected = { station ->
                             viewModel.selectStation(station)
                             currentScreen = Screen.Map
                         },
+                        onSignSelected = { sign ->
+                            viewModel.selectSign(sign)
+                            viewModel.focusSign(sign)
+                            currentScreen = Screen.Map
+                        },
+                        onOpenRandomDraw = { currentScreen = Screen.RandomDraw },
                         onBack = { currentScreen = Screen.Map },
+                    )
+                    Screen.RandomDraw -> RandomSignDrawScreen(
+                        viewModel = viewModel,
+                        onShowOnMap = { sign ->
+                            viewModel.focusSign(sign)
+                            currentScreen = Screen.Map
+                        },
+                        onShowDetail = { sign ->
+                            viewModel.selectSign(sign)
+                            currentScreen = Screen.Map
+                        },
+                        onBack = { currentScreen = Screen.Picker },
                     )
                 }
             }

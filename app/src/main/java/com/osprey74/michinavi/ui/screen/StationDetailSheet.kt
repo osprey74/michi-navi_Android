@@ -120,7 +120,7 @@ fun StationDetailSheet(
                         tint = if (isFavorite) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     Spacer(modifier = Modifier.height(4.dp))
-                    Text(if (isFavorite) "お気に入り済み" else "お気に入りに追加")
+                    Text(if (isFavorite) "お気に入り済み" else "お気に入り")
                 }
                 OutlinedButton(
                     onClick = onToggleVisited,
@@ -139,7 +139,7 @@ fun StationDetailSheet(
                         tint = if (isVisited) Color(0xFF2196F3) else MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     Spacer(modifier = Modifier.height(4.dp))
-                    Text(if (isVisited) "到達済み" else "到達済みにする")
+                    Text("踏破済み")
                 }
             }
 

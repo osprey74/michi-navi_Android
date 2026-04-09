@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.osprey74.michinavi.model.AppSettings
+import com.osprey74.michinavi.model.CountrySign
 import com.osprey74.michinavi.model.NearbyStation
 import com.osprey74.michinavi.model.RoadsideStation
 import com.osprey74.michinavi.service.LocationState
@@ -26,6 +27,8 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
     private val stationService = ServiceLocator.roadsideStationService
     val locationService = ServiceLocator.locationService
     private val settingsRepository = ServiceLocator.settingsRepository
+    private val countrySignRepository = ServiceLocator.countrySignRepository
+    private val countrySignService = ServiceLocator.countrySignService
 
     // 位置情報
     val locationState: StateFlow<LocationState> = locationService.locationState
@@ -74,6 +77,32 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
     val visitedIds: StateFlow<Set<String>> = settingsRepository.visitedIdsFlow
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptySet())
 
+    // --- カントリーサイン ---
+
+    // ビューポート内CS
+    private val _visibleSigns = MutableStateFlow<List<CountrySign>>(emptyList())
+    val visibleSigns: StateFlow<List<CountrySign>> = _visibleSigns.asStateFlow()
+
+    // 選択中のCS（詳細シート表示用）
+    private val _selectedSign = MutableStateFlow<CountrySign?>(null)
+    val selectedSign: StateFlow<CountrySign?> = _selectedSign.asStateFlow()
+
+    // 地図フォーカス要求（CSの位置にカメラ移動）
+    private val _mapFocusSign = MutableStateFlow<CountrySign?>(null)
+    val mapFocusSign: StateFlow<CountrySign?> = _mapFocusSign.asStateFlow()
+
+    // CS お気に入り
+    val favoriteSignIds: StateFlow<Set<String>> = settingsRepository.favoriteSignIdsFlow
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptySet())
+
+    // CS 踏破リスト
+    val visitedSignIds: StateFlow<Set<String>> = settingsRepository.visitedSignIdsFlow
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptySet())
+
+    // CS マーカー表示
+    val showCountrySignMarkers: StateFlow<Boolean> = settingsRepository.showCountrySignMarkersFlow
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
+
     init {
         // 位置情報の変化に応じて近隣道の駅を更新
         locationService.locationState
@@ -112,9 +141,17 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
         _visibleStations.value = stationService.updateVisibleStations(
             centerLat, centerLon, latitudeDelta, longitudeDelta,
         )
+        if (showCountrySignMarkers.value) {
+            _visibleSigns.value = countrySignService.updateVisibleSigns(
+                centerLat, centerLon, latitudeDelta, longitudeDelta,
+            )
+        } else {
+            _visibleSigns.value = emptyList()
+        }
     }
 
     fun selectStation(station: RoadsideStation?) {
+        _selectedSign.value = null // 相互排他
         _selectedStation.value = station
         if (station != null) {
             _isFollowingUser.value = false
@@ -122,6 +159,7 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun selectStationById(id: String) {
+        _selectedSign.value = null
         _selectedStation.value = repository.allStations.find { it.id == id }
     }
 
@@ -176,4 +214,63 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
     fun stationsGroupedByPrefecture() = stationService.stationsGroupedByPrefecture()
 
     val allStations: List<RoadsideStation> get() = repository.allStations
+
+    // --- カントリーサイン操作 ---
+
+    fun selectSign(sign: CountrySign?) {
+        _selectedStation.value = null // 相互排他
+        _selectedSign.value = sign
+        if (sign != null) {
+            _isFollowingUser.value = false
+        }
+    }
+
+    fun selectSignById(id: String) {
+        _selectedStation.value = null
+        _selectedSign.value = countrySignRepository.allSigns.find { it.id == id }
+    }
+
+    fun focusSign(sign: CountrySign) {
+        _mapFocusSign.value = sign
+    }
+
+    fun clearFocusSign() {
+        _mapFocusSign.value = null
+    }
+
+    fun toggleFavoriteSign(signId: String) {
+        viewModelScope.launch {
+            settingsRepository.toggleFavoriteSign(signId)
+        }
+    }
+
+    fun toggleVisitedSign(signId: String) {
+        viewModelScope.launch {
+            settingsRepository.toggleVisitedSign(signId)
+        }
+    }
+
+    fun toggleShowCountrySignMarkers() {
+        viewModelScope.launch {
+            val current = showCountrySignMarkers.value
+            settingsRepository.setShowCountrySignMarkers(!current)
+        }
+    }
+
+    fun getFavoriteCountrySigns(): List<CountrySign> {
+        val ids = favoriteSignIds.value
+        return countrySignRepository.allSigns.filter { it.id in ids }
+    }
+
+    fun getVisitedCountrySigns(): List<CountrySign> {
+        val ids = visitedSignIds.value
+        return countrySignRepository.allSigns.filter { it.id in ids }
+    }
+
+    fun signsGroupedBySubprefecture() = countrySignService.signsGroupedBySubprefecture()
+
+    fun drawRandomUnvisitedSign(): CountrySign? =
+        countrySignService.drawRandomUnvisitedSign(visitedSignIds.value)
+
+    val allSigns: List<CountrySign> get() = countrySignRepository.allSigns
 }

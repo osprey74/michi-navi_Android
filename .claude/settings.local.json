@@ -72,7 +72,8 @@
       "Bash(cp /mnt/g/dev/michi-navi/MichiNavi/MichiNavi/Resources/hokkaido_country_signs.json /mnt/g/dev/michi-navi_Android/app/src/main/assets/)",
       "Bash(cp /mnt/g/dev/michi-navi/MichiNavi/MichiNavi/Resources/hokkaido_boundaries_simplified.geojson /mnt/g/dev/michi-navi_Android/app/src/main/assets/)",
       "Read(//usr/lib/**)",
-      "Read(//usr/local/lib/**)"
+      "Read(//usr/local/lib/**)",
+      "Bash(git tag:*)"
     ]
   }
 }

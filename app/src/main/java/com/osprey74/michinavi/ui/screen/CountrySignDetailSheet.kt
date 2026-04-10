@@ -22,8 +22,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Beenhere
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.Navigation
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.outlined.Beenhere
 import androidx.compose.material.icons.outlined.Image
@@ -290,13 +292,25 @@ fun CountrySignDetailContent(
         }
 
         // 公式サイト
-        sign.tourismUrl?.let { url ->
-            Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(8.dp))
+        if (sign.tourismUrl != null) {
             OutlinedButton(
-                onClick = { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) },
+                onClick = { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(sign.tourismUrl))) },
                 modifier = Modifier.fillMaxWidth(),
             ) {
+                Icon(Icons.Default.Language, contentDescription = null)
+                Spacer(modifier = Modifier.size(4.dp))
                 Text(sign.tourismSiteName ?: "公式サイトを開く")
+            }
+        } else {
+            val query = Uri.encode("${sign.name} 公式サイト")
+            OutlinedButton(
+                onClick = { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://www.google.com/search?q=$query"))) },
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Icon(Icons.Default.Search, contentDescription = null)
+                Spacer(modifier = Modifier.size(4.dp))
+                Text("${sign.name} を検索")
             }
         }
 

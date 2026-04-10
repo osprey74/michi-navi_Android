@@ -65,7 +65,14 @@
       "Bash(export ANDROID_HOME=\"/mnt/c/Users/ospre/AppData/Local/Android/Sdk\")",
       "Bash(/mnt/c/Users/ospre/AppData/Local/Android/Sdk/platform-tools/adb.exe install:*)",
       "Bash(/mnt/c/Users/ospre/AppData/Local/Android/Sdk/platform-tools/adb.exe devices:*)",
-      "Bash(/mnt/c/Users/ospre/AppData/Local/Android/Sdk/platform-tools/adb.exe:*)"
+      "Bash(/mnt/c/Users/ospre/AppData/Local/Android/Sdk/platform-tools/adb.exe:*)",
+      "Bash(wc:*)",
+      "Bash(grep -E \"\\\\.\\(kt|xml\\)$\")",
+      "Bash(cp /mnt/g/dev/michi-navi/MichiNavi/MichiNavi/Resources/hokkaido_municipalities.json /mnt/g/dev/michi-navi_Android/app/src/main/assets/)",
+      "Bash(cp /mnt/g/dev/michi-navi/MichiNavi/MichiNavi/Resources/hokkaido_country_signs.json /mnt/g/dev/michi-navi_Android/app/src/main/assets/)",
+      "Bash(cp /mnt/g/dev/michi-navi/MichiNavi/MichiNavi/Resources/hokkaido_boundaries_simplified.geojson /mnt/g/dev/michi-navi_Android/app/src/main/assets/)",
+      "Read(//usr/lib/**)",
+      "Read(//usr/local/lib/**)"
     ]
   }
 }

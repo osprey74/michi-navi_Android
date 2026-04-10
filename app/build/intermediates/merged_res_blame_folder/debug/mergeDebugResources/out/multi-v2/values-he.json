@@ -1,10 +1,10 @@
 {
     "logs": [
         {
-            "outputFile": "com.osprey74.michinavi.app-mergeDebugResources-61:/values-he/values-he.xml",
+            "outputFile": "com.osprey74.michinavi.app-mergeDebugResources-59:/values-he/values-he.xml",
             "map": [
                 {
-                    "source": "C:\\Users\\ospre\\.gradle\\caches\\8.11.1\\transforms\\71de478211dac1184d084f8f65515664\\transformed\\android-sdk-11.11.0\\res\\values-he\\values-he.xml",
+                    "source": "C:\\Users\\ospre\\.gradle\\caches\\8.11.1\\transforms\\72c916a219b1154194e449fbe16243ec\\transformed\\android-sdk-11.11.0\\res\\values-he\\values-he.xml",
                     "from": {
                         "startLines": "2,3,4,5,6,7,8",
                         "startColumns": "4,4,4,4,4,4,4",

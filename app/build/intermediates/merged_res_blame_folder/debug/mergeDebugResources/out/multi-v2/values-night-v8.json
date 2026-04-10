@@ -1,7 +1,7 @@
 {
     "logs": [
         {
-            "outputFile": "com.osprey74.michinavi.app-mergeDebugResources-61:/values-night-v8/values-night-v8.xml",
+            "outputFile": "com.osprey74.michinavi.app-mergeDebugResources-59:/values-night-v8/values-night-v8.xml",
             "map": [
                 {
                     "source": "G:\\dev\\michi-navi_Android\\app\\src\\main\\res\\values-night\\themes.xml",
@@ -13,21 +13,11 @@
                         "endOffsets": "131"
                     },
                     "to": {
-                        "startLines": "6",
+                        "startLines": "2",
                         "startColumns": "4",
-                        "startOffsets": "253",
+                        "startOffsets": "55",
                         "endColumns": "79",
-                        "endOffsets": "328"
-                    }
-                },
-                {
-                    "source": "C:\\Users\\ospre\\.gradle\\caches\\8.11.1\\transforms\\c9ed245657ad19c4c9409ed50c6e723b\\transformed\\app-1.4.0\\res\\values-night-v8\\values-night-v8.xml",
-                    "from": {
-                        "startLines": "2,3,4,5",
-                        "startColumns": "4,4,4,4",
-                        "startOffsets": "55,104,154,202",
-                        "endColumns": "48,49,47,50",
-                        "endOffsets": "99,149,197,248"
+                        "endOffsets": "130"
                     }
                 }
             ]

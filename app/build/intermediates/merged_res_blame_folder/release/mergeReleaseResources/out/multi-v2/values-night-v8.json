@@ -1,0 +1,26 @@
+{
+    "logs": [
+        {
+            "outputFile": "com.osprey74.michinavi.app-mergeReleaseResources-55:/values-night-v8/values-night-v8.xml",
+            "map": [
+                {
+                    "source": "G:\\dev\\michi-navi_Android\\app\\src\\main\\res\\values-night\\themes.xml",
+                    "from": {
+                        "startLines": "2",
+                        "startColumns": "4",
+                        "startOffsets": "55",
+                        "endColumns": "80",
+                        "endOffsets": "131"
+                    },
+                    "to": {
+                        "startLines": "2",
+                        "startColumns": "4",
+                        "startOffsets": "55",
+                        "endColumns": "79",
+                        "endOffsets": "130"
+                    }
+                }
+            ]
+        }
+    ]
+}

@@ -8,12 +8,12 @@ import java.io.File
 import kotlin.math.max
 
 /**
- * 道の駅フォトアルバムの保存・読み込み・削除を管理するサービス。
+ * フォトアルバムの保存・読み込み・削除を管理するサービス。
  *
- * 写真は `{filesDir}/Albums/{stationId}/photo_{1-3}.jpg` に保存される。
+ * 写真は `{filesDir}/{baseDir}/{itemId}/photo_{1-3}.jpg` に保存される。
  * ファイルパスが固定のため DB 不要 — ファイル存在チェックのみで管理する。
  */
-class StationPhotoStore(private val context: Context) {
+class StationPhotoStore(private val context: Context, private val baseDir: String = "Albums") {
 
     companion object {
         const val MAX_PHOTOS = 3
@@ -24,7 +24,7 @@ class StationPhotoStore(private val context: Context) {
     // -- Paths --
 
     private fun albumDirectory(stationId: String): File =
-        File(context.filesDir, "Albums/$stationId")
+        File(context.filesDir, "$baseDir/$stationId")
 
     private fun photoFile(slot: Int, stationId: String): File =
         File(albumDirectory(stationId), "photo_${slot + 1}.jpg")
@@ -53,11 +53,13 @@ class StationPhotoStore(private val context: Context) {
         }
         if (resized !== original) resized.recycle()
         original.recycle()
+        BackupScheduler.schedule(context)
     }
 
     /** 指定スロットの写真ファイルを削除する */
     fun deletePhoto(slot: Int, stationId: String) {
         photoFile(slot, stationId).delete()
+        BackupScheduler.schedule(context)
     }
 
     // -- Resize helper --

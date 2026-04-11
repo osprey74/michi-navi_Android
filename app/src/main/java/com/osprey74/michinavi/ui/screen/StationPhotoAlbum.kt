@@ -57,9 +57,9 @@ import com.osprey74.michinavi.service.StationPhotoStore
  * - 写真タイルを長押し: 削除確認ダイアログ
  */
 @Composable
-fun StationPhotoAlbum(stationId: String) {
+fun StationPhotoAlbum(stationId: String, baseDir: String = "Albums") {
     val context = LocalContext.current
-    val store = remember { StationPhotoStore(context) }
+    val store = remember(baseDir) { StationPhotoStore(context, baseDir) }
 
     var photos by remember { mutableStateOf(store.loadPhotos(stationId)) }
     var addingSlot by remember { mutableIntStateOf(-1) }

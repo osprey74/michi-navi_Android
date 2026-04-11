@@ -756,7 +756,7 @@ fun MapScreen(
                         if (m.isFavorite || m.isVisited) {
                             val bx = m.x + thumbSizePx / 2f - badgeSize - 2.dp.toPx()
                             val by = m.y - (thumbSizePx + labelGap + csLabelPaint.textSize + 2.dp.toPx() * 2) / 2f + 2.dp.toPx()
-                            val badgePainter = if (m.isFavorite) badgeFavPainter else badgeVisitPainter
+                            val badgePainter = if (m.isFavorite && !m.isVisited) badgeFavPainter else badgeVisitPainter
                             val badgeColor = if (m.isFavorite) colorFavorite else colorVisited
                             translate(left = bx, top = by) {
                                 with(badgePainter) {

@@ -9,7 +9,9 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.osprey74.michinavi.model.AppSettings
+import com.osprey74.michinavi.model.BackupData
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
@@ -64,6 +66,7 @@ class SettingsRepository(private val context: Context) {
                 current + stationId
             }
         }
+        BackupScheduler.schedule(context)
     }
 
     // 到達リスト
@@ -80,6 +83,7 @@ class SettingsRepository(private val context: Context) {
                 current + stationId
             }
         }
+        BackupScheduler.schedule(context)
     }
 
     // カントリーサイン お気に入り
@@ -96,6 +100,7 @@ class SettingsRepository(private val context: Context) {
                 current + signId
             }
         }
+        BackupScheduler.schedule(context)
     }
 
     // カントリーサイン 踏破リスト
@@ -111,6 +116,28 @@ class SettingsRepository(private val context: Context) {
             } else {
                 current + signId
             }
+        }
+        BackupScheduler.schedule(context)
+    }
+
+    // バックアップ / 復元
+
+    suspend fun getBackupData(): BackupData {
+        val prefs = context.dataStore.data.first()
+        return BackupData(
+            favoriteStationIds = prefs[Keys.FAVORITE_STATION_IDS] ?: emptySet(),
+            visitedStationIds = prefs[Keys.VISITED_STATION_IDS] ?: emptySet(),
+            favoriteSignIds = prefs[Keys.FAVORITE_SIGN_IDS] ?: emptySet(),
+            visitedSignIds = prefs[Keys.VISITED_SIGN_IDS] ?: emptySet(),
+        )
+    }
+
+    suspend fun restoreBackupData(data: BackupData) {
+        context.dataStore.edit { prefs ->
+            prefs[Keys.FAVORITE_STATION_IDS] = data.favoriteStationIds
+            prefs[Keys.VISITED_STATION_IDS] = data.visitedStationIds
+            prefs[Keys.FAVORITE_SIGN_IDS] = data.favoriteSignIds
+            prefs[Keys.VISITED_SIGN_IDS] = data.visitedSignIds
         }
     }
 

@@ -261,6 +261,15 @@ fun CountrySignDetailContent(
             }
         }
 
+        // フォトアルバム
+        Spacer(modifier = Modifier.height(12.dp))
+        HorizontalDivider()
+        Spacer(modifier = Modifier.height(12.dp))
+
+        Text(text = "フォトアルバム", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+        Spacer(modifier = Modifier.height(8.dp))
+        StationPhotoAlbum(stationId = sign.id, baseDir = "CountrySignAlbums")
+
         // ナビ + 共有
         Spacer(modifier = Modifier.height(12.dp))
         HorizontalDivider()

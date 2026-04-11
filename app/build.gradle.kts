@@ -29,8 +29,8 @@ android {
         applicationId = "com.osprey74.michinavi"
         minSdk = 26
         targetSdk = 35
-        versionCode = 3
-        versionName = "2.0.1"
+        versionCode = 4
+        versionName = "2.0.2"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -69,6 +69,7 @@ dependencies {
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.datastore.preferences)
+    implementation(libs.androidx.work.runtime.ktx)
 
     // Compose
     implementation(platform(libs.compose.bom))
@@ -83,7 +84,8 @@ dependencies {
     // MapLibre
     implementation(libs.maplibre.android)
 
-    // Location
+    // Google
+    implementation(libs.play.services.auth)
     implementation(libs.play.services.location)
 
     // Serialization

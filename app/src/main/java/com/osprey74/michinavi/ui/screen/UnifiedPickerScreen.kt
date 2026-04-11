@@ -250,7 +250,7 @@ private fun StationTabContent(
         )
         Tab(
             selected = selectedTab == 2, onClick = { onTabChange(2) },
-            icon = { Icon(Icons.Default.Beenhere, null, tint = Color(0xFF2196F3)) }, text = { Text("踏破済み") },
+            icon = { Icon(Icons.Default.Beenhere, null) }, text = { Text("踏破済み") },
         )
     }
 
@@ -259,7 +259,7 @@ private fun StationTabContent(
             when {
                 selectedPrefecture != null && selectedMunicipality != null -> {
                     val stations = grouped[selectedPrefecture]?.get(selectedMunicipality) ?: emptyList()
-                    StationListSection(stations = stations, onStationClick = onStationSelected)
+                    StationListSection(stations = stations, favoriteIds = favoriteIds, visitedIds = visitedIds, onStationClick = onStationSelected)
                 }
                 selectedPrefecture != null -> {
                     val municipalities = grouped[selectedPrefecture]?.keys?.toList() ?: emptyList()
@@ -274,12 +274,12 @@ private fun StationTabContent(
         1 -> {
             val favorites = remember(favoriteIds) { viewModel.getFavoriteStations() }
             if (favorites.isEmpty()) SimpleEmptyState("お気に入りの道の駅はまだありません")
-            else StationListSection(stations = favorites, onStationClick = onStationSelected)
+            else StationListSection(stations = favorites, favoriteIds = favoriteIds, visitedIds = visitedIds, onStationClick = onStationSelected)
         }
         2 -> {
             val visited = remember(visitedIds) { viewModel.getVisitedStations() }
             if (visited.isEmpty()) SimpleEmptyState("踏破した道の駅はまだありません")
-            else StationListSection(stations = visited, onStationClick = onStationSelected)
+            else StationListSection(stations = visited, favoriteIds = favoriteIds, visitedIds = visitedIds, onStationClick = onStationSelected)
         }
     }
 }
@@ -397,12 +397,22 @@ private fun NavigationList(items: List<String>, onItemClick: (String) -> Unit) {
 }
 
 @Composable
-private fun StationListSection(stations: List<RoadsideStation>, onStationClick: (RoadsideStation) -> Unit) {
+private fun StationListSection(stations: List<RoadsideStation>, favoriteIds: Set<String>, visitedIds: Set<String>, onStationClick: (RoadsideStation) -> Unit) {
     LazyColumn(modifier = Modifier.fillMaxSize()) {
         items(stations, key = { it.id }) { station ->
+            val isFavorite = station.id in favoriteIds
+            val isVisited = station.id in visitedIds
             ListItem(
                 headlineContent = { Text(station.name) },
                 supportingContent = { station.roadName?.let { Text(it) } },
+                trailingContent = if (isFavorite || isVisited) {
+                    {
+                        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                            if (isFavorite) Icon(Icons.Default.Favorite, "お気に入り", modifier = Modifier.size(18.dp), tint = Color(0xFFF44336))
+                            if (isVisited) Icon(Icons.Default.Beenhere, "踏破済み", modifier = Modifier.size(18.dp), tint = Color(0xFF2196F3))
+                        }
+                    }
+                } else null,
                 modifier = Modifier.clickable { onStationClick(station) },
             )
         }

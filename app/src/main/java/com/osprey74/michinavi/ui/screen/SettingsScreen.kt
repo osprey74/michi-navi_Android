@@ -63,6 +63,7 @@ import com.google.android.gms.auth.api.signin.GoogleSignInAccount
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.android.gms.common.api.ApiException
 import com.google.android.gms.common.api.Scope
+import com.osprey74.michinavi.BuildConfig
 import com.osprey74.michinavi.service.DriveBackupService
 import kotlinx.coroutines.launch
 import java.time.ZonedDateTime
@@ -395,7 +396,7 @@ fun SettingsScreen(
             SectionHeader("クレジット")
 
             Text(
-                text = "Michi-Navi v2.0.2",
+                text = "Michi-Navi v${BuildConfig.VERSION_NAME}",
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 2.dp),
